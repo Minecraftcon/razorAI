@@ -412,7 +412,7 @@ void ProcessAndExecute(razor::RazorUI& ui, std::string api_response) {
         trimmed_resp.erase(0, trimmed_resp.find_first_not_of(" \t\r\n`'\""));
         trimmed_resp.erase(trimmed_resp.find_last_not_of(" \t\r\n`'\"") + 1);
         
-        if (trimmed_resp == "run_command" || trimmed_resp == "write_file" || trimmed_resp == "read_file" || trimmed_resp == "list_dir" || trimmed_resp == "manage_task" || trimmed_resp == "replace_file_content") {
+        if (trimmed_resp == "run_command" || trimmed_resp == "write_file" || trimmed_resp == "read_file" || trimmed_resp == "list_dir" || trimmed_resp == "manage_task" || trimmed_resp == "replace_file_content" || trimmed_resp == "web_search") {
             ui.StartThinking("Primary Model");
             std::string reprompt = "[SYSTEM NOTE]: You outputted the raw tool name '" + trimmed_resp + "' as text. Please proceed with invoking the tool with proper arguments or provide your final response to the user.";
             std::string next_resp = SendToDaemonSync(reprompt, &ui, 0, 0, ui.GetSessionId());
@@ -420,11 +420,22 @@ void ProcessAndExecute(razor::RazorUI& ui, std::string api_response) {
             return;
         }
 
-        if (!inner_response.empty()) {
-            ui.ProvideResponse(inner_response);
-        } else {
-            ui.ProvideResponse(api_response);
+        if (trimmed_resp.empty()) {
+            static int empty_retries = 0;
+            if (empty_retries < 2) {
+                empty_retries++;
+                ui.StartThinking("Primary Model");
+                std::string reprompt = "[SYSTEM NOTE]: Your previous turn returned empty content. If the last command had no output, investigate why, try alternative flags/methods, or proceed to the next step and report your findings.";
+                std::string next_resp = SendToDaemonSync(reprompt, &ui, 0, 0, ui.GetSessionId());
+                ProcessAndExecute(ui, next_resp);
+                return;
+            }
+            empty_retries = 0;
+            ui.ProvideResponse("(Model completed turn with no additional output)");
+            return;
         }
+
+        ui.ProvideResponse(inner_response);
     }
 }
 

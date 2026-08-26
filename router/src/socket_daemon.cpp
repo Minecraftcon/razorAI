@@ -267,7 +267,11 @@ std::string SocketDaemon::ProcessRequestJson(const std::string& request_json, in
             "  * If a search or lookup returns empty: Reformulate queries, test synonyms, adjust keywords, and inspect local README/docs.\n"
             "  * If a command/build fails: Read the exact error trace, form a new hypothesis, try different flags or combos, and test again.\n"
             "- NEVER GUESS: Do not guess file contents, bug causes, or API signatures. Track down the code to its source, follow callers and callees, and verify actual filesystem state.\n"
-            "- DEEP ROOT-CAUSE TRACING: When debugging, trace the exact code path from trigger to failure. Run the logic internally. Explain clearly WHAT is causing WHAT before modifying code.\n"
+            "- BROWSER AUTOMATION & CHROME PROTOCOL (CDP):\n"
+            "  * Note: Chrome DevTools target endpoints (`/devtools/page/<id>`) are WebSockets (`ws://`), not HTTP POST endpoints.\n"
+            "  * To evaluate JS or automate a live browser: Write a short Python/Node runner script in your session scratch path using `websockets`, `playwright`, or `selenium`, and run it with 'run_command'.\n"
+            "- SILENT OR EMPTY COMMAND OUTPUTS:\n"
+            "  * If a command completes with no output, evaluate why. If data was expected, re-run with verbose/debug flags, test alternative approaches, or inspect logs in your scratch directory rather than ending the turn with an empty response.\n"
             "- VERIFY THOROUGHLY: After making changes, always run build checks or tests to prove the fix works rather than assuming success.\n\n"
 
             "TOOL STRATEGY:\n"
