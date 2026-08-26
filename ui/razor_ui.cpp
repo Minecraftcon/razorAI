@@ -1459,10 +1459,35 @@ void RazorUI::Run() {
 
                     Elements prompt_ui;
                     for (size_t i = 0; i < prompt_lines.size(); ++i) {
+                        std::string line = prompt_lines[i];
+                        if (i == 0 && (line.rfind("[S: ", 0) == 0 || line.rfind("[Skill: ", 0) == 0)) {
+                            size_t prefix_len = (line.rfind("[S: ", 0) == 0) ? 4 : 8;
+                            size_t close_b = line.find(']', prefix_len);
+                            if (close_b != std::string::npos) {
+                                std::string skill_name = line.substr(prefix_len, close_b - prefix_len);
+                                skill_name.erase(0, skill_name.find_first_not_of(" \t\r\n"));
+                                skill_name.erase(skill_name.find_last_not_of(" \t\r\n") + 1);
+
+                                std::string remaining_text = line.substr(close_b + 1);
+                                remaining_text.erase(0, remaining_text.find_first_not_of(" \t\r\n"));
+
+                                prompt_ui.push_back(
+                                    hbox({
+                                        text("> ") | bold | color(Color::White),
+                                        text(" SKILL ") | bold | color(Color::Black) | bgcolor(Color::MagentaLight),
+                                        text(" " + skill_name + " ") | bold | color(Color::MagentaLight) | bgcolor(Color::RGB(48, 20, 54)),
+                                        text(" "),
+                                        text(remaining_text) | bold | color(Color::RGB(75, 184, 252)) | flex
+                                    })
+                                );
+                                continue;
+                            }
+                        }
+
                         prompt_ui.push_back(
                             hbox(
                                 text(i == 0 ? "> " : "  ") | bold | color(Color::RGB(75, 184, 252)),
-                                text(prompt_lines[i]) | bold | color(Color::RGB(75, 184, 252))
+                                text(line) | bold | color(Color::RGB(75, 184, 252))
                             )
                         );
                     }
@@ -1627,6 +1652,26 @@ void RazorUI::Run() {
             }) | bgcolor(Color::RGB(30, 30, 30));
         }
 
+        std::string typing_skill_name = "";
+        if (prompt_value_.rfind("[S: ", 0) == 0 || prompt_value_.rfind("[Skill: ", 0) == 0) {
+            size_t prefix_len = (prompt_value_.rfind("[S: ", 0) == 0) ? 4 : 8;
+            size_t close_b = prompt_value_.find(']', prefix_len);
+            if (close_b != std::string::npos) {
+                typing_skill_name = prompt_value_.substr(prefix_len, close_b - prefix_len);
+                typing_skill_name.erase(0, typing_skill_name.find_first_not_of(" \t\r\n"));
+                typing_skill_name.erase(typing_skill_name.find_last_not_of(" \t\r\n") + 1);
+            }
+        }
+
+        Element skill_typing_banner = text("");
+        if (!typing_skill_name.empty()) {
+            skill_typing_banner = hbox({
+                text(" ACTIVE SKILL ") | bold | color(Color::Black) | bgcolor(Color::MagentaLight),
+                text(" " + typing_skill_name + " ") | bold | color(Color::MagentaLight) | bgcolor(Color::RGB(48, 20, 54)),
+                text(" (Directives will be auto-loaded and executed on submit) ") | color(Color::GrayLight) | flex,
+            }) | bgcolor(Color::RGB(28, 16, 32));
+        }
+
         std::string active_model_name = (selected_model_idx_.load() < (int)available_models_.size()) 
             ? available_models_[selected_model_idx_.load()] : "Default";
 
@@ -1645,6 +1690,10 @@ void RazorUI::Run() {
             input_rows.push_back(border_top);
             if (!current_steer.empty()) {
                 input_rows.push_back(steer_banner);
+                input_rows.push_back(separatorLight() | color(Color::GrayDark));
+            }
+            if (!typing_skill_name.empty()) {
+                input_rows.push_back(skill_typing_banner);
                 input_rows.push_back(separatorLight() | color(Color::GrayDark));
             }
             input_rows.push_back(input_row);
