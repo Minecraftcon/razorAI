@@ -2,6 +2,7 @@
 #include "task_manager.hpp"
 #include "file_inspector.hpp"
 #include "skill_manager.hpp"
+#include "web_search.hpp"
 #include "c_router_bridge.h"
 #include <iostream>
 #include <cassert>
@@ -109,6 +110,16 @@ int main() {
     assert(!skills_table.empty());
     std::cout << "[SkillManager Test 2] Skills list preview:\n" << skills_table.substr(0, 300) << "...\n" << std::endl;
 
-    std::cout << "=== All Router, TaskManager, FileInspector & SkillManager Tests Passed Successfully! ===" << std::endl;
+    // Test 13: WebSearch TinyFish tool
+    std::cout << "\n=== Running WebSearch Tests ===" << std::endl;
+    std::string search_res = razor::WebSearch::Search("speed test");
+    assert(!search_res.empty());
+    std::cout << "[WebSearch Test 1] Search result preview:\n" << search_res.substr(0, 300) << "...\n" << std::endl;
+
+    std::string fetch_res = razor::WebSearch::Fetch("https://en.wikipedia.org/wiki/Test");
+    assert(!fetch_res.empty());
+    std::cout << "[WebSearch Test 2] Fetch result preview:\n" << fetch_res.substr(0, 300) << "...\n" << std::endl;
+
+    std::cout << "=== All Router, TaskManager, FileInspector, SkillManager & WebSearch Tests Passed Successfully! ===" << std::endl;
     return 0;
 }

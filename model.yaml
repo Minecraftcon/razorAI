@@ -49,3 +49,6 @@ embeddings:
 - provider: gemini
   model: gemini-embedding-2
   apiKey: ${GEMINI_API_KEY}
+webSearch:
+  provider: tinyfish
+  apiKey: sk-tinyfish--bB3m22tB_FZdRCBFz4m47HDq0OwuM-E

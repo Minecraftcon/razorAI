@@ -1,6 +1,7 @@
 #include "socket_daemon.hpp"
 #include "task_manager.hpp"
 #include "skill_manager.hpp"
+#include "web_search.hpp"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -270,6 +271,7 @@ std::string SocketDaemon::ProcessRequestJson(const std::string& request_json, in
             "- VERIFY THOROUGHLY: After making changes, always run build checks or tests to prove the fix works rather than assuming success.\n\n"
 
             "TOOL STRATEGY:\n"
+            "- WEB SEARCH & SCRAPING: Use 'web_search' with 'search' (to query the live web for real-time information) or 'fetch' (to scrape/fetch clean text/markdown from specific URLs via TinyFish).\n"
             "- DIRECTORIES: Use 'list_dir' to view directories with detailed file types, sizes, permissions, and timestamps.\n"
             "- EDITING: Use 'replace_file_content' to make targeted code modifications, or 'write_file' for new files.\n"
             "- COMMANDS & BACKGROUND PROCESSES:\n"
@@ -391,6 +393,21 @@ std::string SocketDaemon::ProcessRequestJson(const std::string& request_json, in
                             }}
                         }}
                     };
+                } else if (t == "web_search" || t == "search_web" || t == "fetch_url") {
+                    tool_def["function"]["description"] = "Search the live web for real-time information or fetch and extract clean markdown content from specific web URLs using TinyFish.";
+                    tool_def["function"]["parameters"] = {
+                        {"type", "object"},
+                        {"properties", {
+                            {"search", {
+                                {"type", "string"},
+                                {"description", "Web search query string to look up up-to-date live information on the internet."}
+                            }},
+                            {"fetch", {
+                                {"type", "string"},
+                                {"description", "URL of a web page to fetch, scrape, and extract clean text/markdown content from."}
+                            }}
+                        }}
+                    };
                 } else {
                     unimplemented_tools.push_back(t);
                     tool_def["function"]["parameters"] = {
@@ -407,7 +424,7 @@ std::string SocketDaemon::ProcessRequestJson(const std::string& request_json, in
                     forbid_prompt += unimplemented_tools[i];
                     if (i < unimplemented_tools.size() - 1) forbid_prompt += ", ";
                 }
-                forbid_prompt += ". DO NOT use these tools under any circumstances. You DO HAVE working tools: 'run_command' (with work_time and name), 'manage_task' (with view, kill, send_keycode), 'list_dir', 'read_file', 'write_file', and 'replace_file_content'. Use these working tools instead!";
+                forbid_prompt += ". DO NOT use these tools under any circumstances. You DO HAVE working tools: 'web_search' (with search and fetch), 'run_command' (with work_time and name), 'manage_task' (with view, kill, send_keycode), 'list_dir', 'read_file', 'write_file', and 'replace_file_content'. Use these working tools instead!";
                 sys_prompts.push_back(forbid_prompt);
             }
         }

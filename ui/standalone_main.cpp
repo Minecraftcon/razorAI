@@ -1,6 +1,7 @@
 #include "razor_ui.hpp"
 #include "task_manager.hpp"
 #include "file_inspector.hpp"
+#include "web_search.hpp"
 #include <poll.h>
 #include <chrono>
 #include <nlohmann/json.hpp>
@@ -353,6 +354,32 @@ void ProcessAndExecute(razor::RazorUI& ui, std::string api_response) {
                             results_array.push_back(result_payload);
                             should_continue_any = true;
                         }
+                    } else if (tool == "web_search" || tool == "search_web" || tool == "fetch_url") {
+                        std::string search_query = "";
+                        std::string fetch_url = "";
+                        if (tc.contains("args")) {
+                            if (tc["args"].contains("search")) search_query = tc["args"]["search"].get<std::string>();
+                            else if (tc["args"].contains("query")) search_query = tc["args"]["query"].get<std::string>();
+                            else if (tc["args"].contains("q")) search_query = tc["args"]["q"].get<std::string>();
+
+                            if (tc["args"].contains("fetch")) fetch_url = tc["args"]["fetch"].get<std::string>();
+                            else if (tc["args"].contains("url")) fetch_url = tc["args"]["url"].get<std::string>();
+                        }
+                        std::string tag_info = !search_query.empty() ? search_query : fetch_url;
+                        std::string tag = "[TOOL_EXECUTION:web_search|STATUS:0] " + tag_info;
+                        ui.ProvideResponse(tag);
+
+                        std::string output = razor::WebSearch::Execute(search_query, fetch_url);
+                        if (output.empty()) output = "(No results returned from web search)";
+
+                        json result_payload;
+                        result_payload["tool_result"] = true;
+                        result_payload["tool_call_id"] = tool_call_id;
+                        result_payload["name"] = tool;
+                        result_payload["prompt"] = output;
+
+                        results_array.push_back(result_payload);
+                        should_continue_any = true;
                     } else {
                         std::string tag = "[TOOL_EXECUTION_ERROR] Unsupported tool requested: " + tool;
                         ui.ProvideResponse(tag);

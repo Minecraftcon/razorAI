@@ -15,6 +15,7 @@ add_library(razor_router_lib STATIC
   src/task_manager.cpp
   src/file_inspector.cpp
   src/skill_manager.cpp
+  src/web_search.cpp
 )
 
 # Shared router library for Go CGO
@@ -29,6 +30,7 @@ add_library(razor_router_shared SHARED
   src/task_manager.cpp
   src/file_inspector.cpp
   src/skill_manager.cpp
+  src/web_search.cpp
 )
 
 target_include_directories(razor_router_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/orchestrator/include ${CURL_INCLUDE_DIRS})
