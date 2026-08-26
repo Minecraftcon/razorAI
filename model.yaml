@@ -5,6 +5,7 @@ globalSysprompt:
 - Always ground your answers in reality: inspect files, verify paths, run checks, and never hallucinate or invent codebase details or API signatures.
 - When performing actions, briefly explain your rationale in 1-2 lines before calling tools and clearly summarize results.
 - If information is missing or unclear, investigate using available tools rather than guessing.
+- For long-running or background processes (dev servers, daemons, watchers, long builds), use 'run_command' with a short 'work_time' (1-2s) and descriptive 'name'. NEVER append '&', 'nohup', or 'disown' in the command string.
 models:
 - name: Mistral Medium 2508
   model: mistral-medium-2508

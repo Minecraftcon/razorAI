@@ -237,8 +237,12 @@ std::string SocketDaemon::ProcessRequestJson(const std::string& request_json, in
             "TOOL STRATEGY:\n"
             "- DIRECTORIES: Use 'list_dir' to view directories with detailed file types, sizes, permissions, and timestamps.\n"
             "- EDITING: Use 'replace_file_content' to make targeted code modifications, or 'write_file' for new files.\n"
-            "- COMMANDS: When running commands with 'run_command', provide a short descriptive 'name'. Set 'work_time' for background processes.\n"
-            "- BACKGROUND TASKS: Use 'manage_task' with action='view', 'send_keycode', or 'kill' to monitor or terminate jobs.\n"
+            "- COMMANDS & BACKGROUND PROCESSES:\n"
+            "  * Always give commands a short descriptive 'name' (e.g. 'dev_server', 'unit_tests', 'daemon_proc').\n"
+            "  * For long-running processes (e.g. dev servers, daemons, watchers, log tails, long builds), specify a short 'work_time' (1-2 seconds).\n"
+            "  * NEVER append '&', 'nohup', 'disown', 'screen', or 'tmux' to commands. The built-in Task Manager automatically manages and tracks background execution with PTY logging.\n"
+            "- BACKGROUND TASKS MANAGEMENT:\n"
+            "  * Use 'manage_task' with action='view' to check status/logs, 'send_keycode' to send stdin input, and 'kill' to terminate background jobs.\n"
         );
 
         std::vector<std::string> combined_tools;
@@ -264,15 +268,15 @@ std::string SocketDaemon::ProcessRequestJson(const std::string& request_json, in
                         {"properties", {
                             {"command", {
                                 {"type", "string"},
-                                {"description", "The shell command to execute"}
+                                {"description", "The shell command to execute. NEVER append '&', 'nohup', or 'disown' — use the 'work_time' parameter to background long-running tasks."}
                             }},
                             {"work_time", {
                                 {"type", "integer"},
-                                {"description", "Number of seconds to wait synchronously before backgrounding the command (default: 5)"}
+                                {"description", "Number of seconds to wait synchronously before backgrounding the command (e.g. 1 or 2 for servers, watchers, and background daemons). Default: 5"}
                             }},
                             {"name", {
                                 {"type", "string"},
-                                {"description", "Short, concise name for the task (e.g. 'build_server', 'test_runner')"}
+                                {"description", "Short, concise descriptive name for the task (e.g. 'dev_server', 'test_runner')"}
                             }}
                         }},
                         {"required", json::array({"command"})}
