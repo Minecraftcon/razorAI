@@ -89,6 +89,7 @@ private:
     std::atomic<bool> show_skill_picker_{false};
     std::string skill_search_query_ = "";
     int skill_menu_selected_ = 0;
+    std::string active_skill_name_ = "";
 
     // Paste buffering state
     std::string pasted_buffer_ = "";

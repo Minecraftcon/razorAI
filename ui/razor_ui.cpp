@@ -1147,7 +1147,8 @@ void RazorUI::Run() {
                     const auto* sk = SkillManager::Instance().GetSkill(chosen);
                     if (sk != nullptr || prompt_value_.rfind("/skill", 0) == 0) {
                         std::string sname = sk ? sk->name : chosen;
-                        prompt_value_ = "[S: " + sname + "] ";
+                        active_skill_name_ = sname;
+                        prompt_value_.clear();
                         selected_command_index_ = 0;
                         return true;
                     }
@@ -1181,6 +1182,13 @@ void RazorUI::Run() {
             }
         }
 
+        if (event == Event::Backspace || event == Event::Character('\x7f') || event == Event::Special("\x7f")) {
+            if (prompt_value_.empty() && !active_skill_name_.empty()) {
+                active_skill_name_.clear();
+                return true;
+            }
+        }
+
         if (event == Event::Return || event == Event::Character(' ')) {
             if (event == Event::Return && is_paste) {
                 return false; // Let base_input_component insert a newline
@@ -1190,7 +1198,7 @@ void RazorUI::Run() {
                 return false; // Let base_input_component handle normal space
             }
 
-            if (!prompt_value_.empty() || !pasted_buffer_.empty()) {
+            if (!prompt_value_.empty() || !pasted_buffer_.empty() || !active_skill_name_.empty()) {
                 // Combine pasted content + typed afterword
                 std::string full_prompt;
                 if (!pasted_buffer_.empty()) {
@@ -1205,8 +1213,11 @@ void RazorUI::Run() {
                 }
                 prompt_value_.clear();
 
+                std::string skill_to_use = active_skill_name_;
+                active_skill_name_.clear();
+
                 // Intercept and process local slash commands
-                if (full_prompt.rfind("/", 0) == 0) {
+                if (skill_to_use.empty() && full_prompt.rfind("/", 0) == 0) {
                     std::string cmd = full_prompt.substr(1);
                     std::string arg = "";
                     size_t space_pos = cmd.find(' ');
@@ -1315,24 +1326,32 @@ void RazorUI::Run() {
                     }
                 }
 
-                // Check for [S: <skill_name>] or [Skill: <skill_name>] prompt transformation
+                // Check for skill transformation
                 std::string backend_prompt = full_prompt;
-                if (full_prompt.rfind("[S: ", 0) == 0 || full_prompt.rfind("[Skill: ", 0) == 0) {
+                std::string history_prompt = full_prompt;
+
+                // Handle legacy [S: ...] text if pasted
+                if (skill_to_use.empty() && (full_prompt.rfind("[S: ", 0) == 0 || full_prompt.rfind("[Skill: ", 0) == 0)) {
                     size_t prefix_len = (full_prompt.rfind("[S: ", 0) == 0) ? 4 : 8;
                     size_t close_b = full_prompt.find(']', prefix_len);
                     if (close_b != std::string::npos) {
-                        std::string skill_name = full_prompt.substr(prefix_len, close_b - prefix_len);
-                        skill_name.erase(0, skill_name.find_first_not_of(" \t\r\n"));
-                        skill_name.erase(skill_name.find_last_not_of(" \t\r\n") + 1);
+                        skill_to_use = full_prompt.substr(prefix_len, close_b - prefix_len);
+                        skill_to_use.erase(0, skill_to_use.find_first_not_of(" \t\r\n"));
+                        skill_to_use.erase(skill_to_use.find_last_not_of(" \t\r\n") + 1);
 
-                        std::string user_rest = full_prompt.substr(close_b + 1);
-                        user_rest.erase(0, user_rest.find_first_not_of(" \t\r\n"));
-
-                        const auto* sk = SkillManager::Instance().GetSkill(skill_name);
-                        if (sk) {
-                            backend_prompt = "Skill:" + sk->path + (user_rest.empty() ? "" : " " + user_rest);
-                        }
+                        full_prompt = full_prompt.substr(close_b + 1);
+                        full_prompt.erase(0, full_prompt.find_first_not_of(" \t\r\n"));
+                        backend_prompt = full_prompt;
+                        history_prompt = full_prompt;
                     }
+                }
+
+                if (!skill_to_use.empty()) {
+                    const auto* sk = SkillManager::Instance().GetSkill(skill_to_use);
+                    if (sk) {
+                        backend_prompt = "Skill:" + sk->path + (full_prompt.empty() ? "" : " " + full_prompt);
+                    }
+                    history_prompt = "[S: " + skill_to_use + "] " + full_prompt;
                 }
 
                 if (IsModelThinking()) {
@@ -1347,7 +1366,7 @@ void RazorUI::Run() {
                     {
                         std::lock_guard<std::mutex> lock(history_mutex_);
                         ChatMessage msg;
-                        msg.prompt = full_prompt;
+                        msg.prompt = history_prompt;
                         msg.is_loading = true;
                         msg.streamed_length = 0;
                         msg.start_time = std::chrono::steady_clock::now();
@@ -1568,12 +1587,21 @@ void RazorUI::Run() {
         Element border_top = separatorLight() | color(Color::GrayDark);
         Element border_bottom = separatorLight() | color(Color::GrayDark);
         Element prompt_symbol = text("> ") | bold | color(Color::White);
+        Element skill_badge = text("");
+        if (!active_skill_name_.empty()) {
+            skill_badge = hbox({
+                text(" " + active_skill_name_ + " ") | bold | color(Color::Black) | bgcolor(Color::MagentaLight),
+                text(" ")
+            });
+        }
+
         Element input_row;
         if (is_pasting_.load()) {
             // Active paste — show live counter
             int live_count = (int)std::count(pasted_buffer_.begin(), pasted_buffer_.end(), '\n') + 1;
             input_row = hbox(
                 prompt_symbol,
+                skill_badge,
                 text("[pasting ") | color(Color::YellowLight),
                 text(std::to_string(live_count)) | bold | color(Color::YellowLight),
                 text(" lines...]") | color(Color::YellowLight)
@@ -1582,6 +1610,7 @@ void RazorUI::Run() {
             // Paste finalized — show indicator + editable input after
             input_row = hbox(
                 prompt_symbol,
+                skill_badge,
                 text("[pasted ") | color(Color::BlueLight),
                 text(std::to_string(paste_line_count_)) | bold | color(Color::CyanLight),
                 text(" lines] ") | color(Color::BlueLight),
@@ -1590,6 +1619,7 @@ void RazorUI::Run() {
         } else {
             input_row = hbox(
                 prompt_symbol,
+                skill_badge,
                 input_component->Render() | flex
             );
         }
@@ -1652,26 +1682,6 @@ void RazorUI::Run() {
             }) | bgcolor(Color::RGB(30, 30, 30));
         }
 
-        std::string typing_skill_name = "";
-        if (prompt_value_.rfind("[S: ", 0) == 0 || prompt_value_.rfind("[Skill: ", 0) == 0) {
-            size_t prefix_len = (prompt_value_.rfind("[S: ", 0) == 0) ? 4 : 8;
-            size_t close_b = prompt_value_.find(']', prefix_len);
-            if (close_b != std::string::npos) {
-                typing_skill_name = prompt_value_.substr(prefix_len, close_b - prefix_len);
-                typing_skill_name.erase(0, typing_skill_name.find_first_not_of(" \t\r\n"));
-                typing_skill_name.erase(typing_skill_name.find_last_not_of(" \t\r\n") + 1);
-            }
-        }
-
-        Element skill_typing_banner = text("");
-        if (!typing_skill_name.empty()) {
-            skill_typing_banner = hbox({
-                text(" ACTIVE SKILL ") | bold | color(Color::Black) | bgcolor(Color::MagentaLight),
-                text(" " + typing_skill_name + " ") | bold | color(Color::MagentaLight) | bgcolor(Color::RGB(48, 20, 54)),
-                text(" (Directives will be auto-loaded and executed on submit) ") | color(Color::GrayLight) | flex,
-            }) | bgcolor(Color::RGB(28, 16, 32));
-        }
-
         std::string active_model_name = (selected_model_idx_.load() < (int)available_models_.size()) 
             ? available_models_[selected_model_idx_.load()] : "Default";
 
@@ -1684,16 +1694,12 @@ void RazorUI::Run() {
         });
 
         Element input_area;
-        bool has_text = !prompt_value_.empty();
+        bool has_text = !prompt_value_.empty() || !active_skill_name_.empty();
         if (has_text || !current_steer.empty() || (duration_idle.count() < 10 && duration_scroll.count() >= 3)) {
             Elements input_rows;
             input_rows.push_back(border_top);
             if (!current_steer.empty()) {
                 input_rows.push_back(steer_banner);
-                input_rows.push_back(separatorLight() | color(Color::GrayDark));
-            }
-            if (!typing_skill_name.empty()) {
-                input_rows.push_back(skill_typing_banner);
                 input_rows.push_back(separatorLight() | color(Color::GrayDark));
             }
             input_rows.push_back(input_row);
@@ -1944,7 +1950,8 @@ void RazorUI::Run() {
                 if (!filtered_skills.empty() && skill_menu_selected_ >= 0 && skill_menu_selected_ < (int)filtered_skills.size()) {
                     std::string chosen_skill = filtered_skills[skill_menu_selected_].name;
                     show_skill_picker_ = false;
-                    prompt_value_ = "[S: " + chosen_skill + "] ";
+                    active_skill_name_ = chosen_skill;
+                    prompt_value_.clear();
                 } else {
                     show_skill_picker_ = false;
                 }
