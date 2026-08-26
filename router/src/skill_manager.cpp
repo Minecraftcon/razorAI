@@ -67,6 +67,8 @@ std::vector<SkillInfo> SkillManager::DiscoverSkills(bool force_refresh) {
         search_roots.push_back(std::string(home) + "/.gemini/antigravity-ide/builtin/skills");
     }
     search_roots.push_back(".agents/skills");
+    search_roots.push_back("assets/skills");
+    search_roots.push_back("assets/plugins");
 
     for (const auto& root_str : search_roots) {
         fs::path root_path(root_str);

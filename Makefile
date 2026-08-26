@@ -1,4 +1,4 @@
-.PHONY: all help build test test-router test-go test-valgrind demo clean run run-ui run-daemon
+.PHONY: all help build test test-router test-go test-valgrind demo clean run run-ui run-daemon package-skills
 
 all: build
 
@@ -7,6 +7,7 @@ help:
 	@echo ""
 	@echo "Available targets:"
 	@echo "  build             - Build all C++ libraries, daemons, and UI targets"
+	@echo "  package-skills    - Package all active skills & plugins into assets/"
 	@echo "  test              - Run all C++ and Go unit tests"
 	@echo "  test-router       - Run C++ router test suite"
 	@echo "  test-go           - Run Go package unit tests"
@@ -44,6 +45,9 @@ run-ui: build
 
 run-daemon: build
 	./scripts/run_daemon.sh
+
+package-skills:
+	python3 scripts/package_skills.py
 
 clean:
 	rm -rf build bin

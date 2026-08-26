@@ -1,0 +1,506 @@
+[
+  {
+    "name": "android-ui-creator",
+    "description": ">-",
+    "source_type": "global_skills",
+    "plugin": "global_skills",
+    "skill_path": "/home/shado/Documents/Agentic/assets/skills/android-ui-creator/SKILL.md",
+    "rel_path": "assets/skills/android-ui-creator/SKILL.md"
+  },
+  {
+    "name": "uv",
+    "description": ">-",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/uv/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/uv/SKILL.md"
+  },
+  {
+    "name": "ucsc-conservation-and-tfbs",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/ucsc_conservation_and_tfbs/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/ucsc_conservation_and_tfbs/SKILL.md"
+  },
+  {
+    "name": "clinvar-database",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/clinvar_database/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/clinvar_database/SKILL.md"
+  },
+  {
+    "name": "protein-sequence-msa",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/protein_sequence_msa/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/protein_sequence_msa/SKILL.md"
+  },
+  {
+    "name": "alphagenome-single-variant-analysis",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/alphagenome_single_variant_analysis/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/alphagenome_single_variant_analysis/SKILL.md"
+  },
+  {
+    "name": "interpro-database",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/interpro_database/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/interpro_database/SKILL.md"
+  },
+  {
+    "name": "encode-ccres-database",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/encode_ccres_database/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/encode_ccres_database/SKILL.md"
+  },
+  {
+    "name": "unibind-database",
+    "description": ">-",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/unibind_database/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/unibind_database/SKILL.md"
+  },
+  {
+    "name": "reactome-database",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/reactome_database/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/reactome_database/SKILL.md"
+  },
+  {
+    "name": "clinical-trials-database",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/clinical_trials_database/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/clinical_trials_database/SKILL.md"
+  },
+  {
+    "name": "protein-sequence-similarity-search",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/protein_sequence_similarity_search/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/protein_sequence_similarity_search/SKILL.md"
+  },
+  {
+    "name": "opentargets-database",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/opentargets_database/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/opentargets_database/SKILL.md"
+  },
+  {
+    "name": "openfda-database",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/openfda_database/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/openfda_database/SKILL.md"
+  },
+  {
+    "name": "scienceskillscommon",
+    "description": ">-",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/scienceskillscommon/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/scienceskillscommon/SKILL.md"
+  },
+  {
+    "name": "quickgo-database",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/quickgo_database/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/quickgo_database/SKILL.md"
+  },
+  {
+    "name": "pymol",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/pymol/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/pymol/SKILL.md"
+  },
+  {
+    "name": "pubchem-database",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/pubchem_database/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/pubchem_database/SKILL.md"
+  },
+  {
+    "name": "alphafold-database-fetch-and-analyze",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/alphafold_database_fetch_and_analyze/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/alphafold_database_fetch_and_analyze/SKILL.md"
+  },
+  {
+    "name": "literature-search-arxiv",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/literature_search_arxiv/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/literature_search_arxiv/SKILL.md"
+  },
+  {
+    "name": "gtex-database",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/gtex_database/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/gtex_database/SKILL.md"
+  },
+  {
+    "name": "pubmed-database",
+    "description": ">-",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/pubmed_database/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/pubmed_database/SKILL.md"
+  },
+  {
+    "name": "literature-search-openalex",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/literature_search_openalex/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/literature_search_openalex/SKILL.md"
+  },
+  {
+    "name": "embl-ebi-ols",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/embl_ebi_ols/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/embl_ebi_ols/SKILL.md"
+  },
+  {
+    "name": "workflow-skill-creator",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/workflow_skill_creator/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/workflow_skill_creator/SKILL.md"
+  },
+  {
+    "name": "uniprot-database",
+    "description": ">-",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/uniprot_database/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/uniprot_database/SKILL.md"
+  },
+  {
+    "name": "pdb-database",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/pdb_database/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/pdb_database/SKILL.md"
+  },
+  {
+    "name": "gnomad-database",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/gnomad_database/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/gnomad_database/SKILL.md"
+  },
+  {
+    "name": "literature-search-europepmc",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/literature_search_europepmc/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/literature_search_europepmc/SKILL.md"
+  },
+  {
+    "name": "ncbi-sequence-fetch",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/ncbi_sequence_fetch/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/ncbi_sequence_fetch/SKILL.md"
+  },
+  {
+    "name": "chembl-database",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/chembl_database/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/chembl_database/SKILL.md"
+  },
+  {
+    "name": "literature-search-biorxiv",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/literature_search_biorxiv/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/literature_search_biorxiv/SKILL.md"
+  },
+  {
+    "name": "ensembl-database",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/ensembl_database/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/ensembl_database/SKILL.md"
+  },
+  {
+    "name": "human-protein-atlas-database",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/human_protein_atlas_database/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/human_protein_atlas_database/SKILL.md"
+  },
+  {
+    "name": "string-database",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/string_database/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/string_database/SKILL.md"
+  },
+  {
+    "name": "jaspar-database",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/jaspar_database/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/jaspar_database/SKILL.md"
+  },
+  {
+    "name": "dbsnp-database",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/dbsnp_database/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/dbsnp_database/SKILL.md"
+  },
+  {
+    "name": "foldseek-structural-search",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/foldseek_structural_search/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/foldseek_structural_search/SKILL.md"
+  },
+  {
+    "name": "credentials",
+    "description": ">-",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/credentials/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/credentials/SKILL.md"
+  },
+  {
+    "name": "predictingthepast",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "science",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/predictingthepast/SKILL.md",
+    "rel_path": "assets/plugins/science/skills/predictingthepast/SKILL.md"
+  },
+  {
+    "name": "firebase-ai-logic-basics",
+    "description": "Official skill for integrating Firebase AI Logic (Gemini API) into web applications. Covers setup, multimodal inference, structured output, and security.",
+    "source_type": "plugins",
+    "plugin": "firebase",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/firebase/skills/firebase_ai_logic_basics/SKILL.md",
+    "rel_path": "assets/plugins/firebase/skills/firebase_ai_logic_basics/SKILL.md"
+  },
+  {
+    "name": "firebase-app-hosting-basics",
+    "description": "Deploy and manage web apps with Firebase App Hosting. Use this skill when deploying Next.js/Angular apps with backends.",
+    "source_type": "plugins",
+    "plugin": "firebase",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/firebase/skills/firebase_app_hosting_basics/SKILL.md",
+    "rel_path": "assets/plugins/firebase/skills/firebase_app_hosting_basics/SKILL.md"
+  },
+  {
+    "name": "firebase-auth-basics",
+    "description": "Guide for setting up and using Firebase Authentication. Use this skill when the user's app requires user sign-in, user management, or secure data access using auth rules.",
+    "source_type": "plugins",
+    "plugin": "firebase",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/firebase/skills/firebase_auth_basics/SKILL.md",
+    "rel_path": "assets/plugins/firebase/skills/firebase_auth_basics/SKILL.md"
+  },
+  {
+    "name": "firebase-basics",
+    "description": ">-",
+    "source_type": "plugins",
+    "plugin": "firebase",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/firebase/skills/firebase_basics/SKILL.md",
+    "rel_path": "assets/plugins/firebase/skills/firebase_basics/SKILL.md"
+  },
+  {
+    "name": "firebase-crashlytics",
+    "description": "Comprehensive guide for Firebase Crashlytics, including provisioning and SDK usage. Use this skill when the user needs help setting up Crashlytics, adding crash reporting, or using the Crashlytics SDK in their application.",
+    "source_type": "plugins",
+    "plugin": "firebase",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/firebase/skills/firebase_crashlytics/SKILL.md",
+    "rel_path": "assets/plugins/firebase/skills/firebase_crashlytics/SKILL.md"
+  },
+  {
+    "name": "firebase-data-connect",
+    "description": "Builds and deploys Firebase SQL Connect (aka Firebase Data Connect) backends with PostgreSQL securely. Use when designing schemas with tables and relations, writing authorized queries and mutations, configuring real-time data updates, or generating type-safe SDKs. Use when you need a relational database with Firebase, or when the user mentions SQL Connect or Data Connect.",
+    "source_type": "plugins",
+    "plugin": "firebase",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/firebase/skills/firebase_data_connect_basics/SKILL.md",
+    "rel_path": "assets/plugins/firebase/skills/firebase_data_connect_basics/SKILL.md"
+  },
+  {
+    "name": "firebase-firestore",
+    "description": ">-",
+    "source_type": "plugins",
+    "plugin": "firebase",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/firebase/skills/firebase_firestore/SKILL.md",
+    "rel_path": "assets/plugins/firebase/skills/firebase_firestore/SKILL.md"
+  },
+  {
+    "name": "firebase-hosting-basics",
+    "description": "Skill for working with Firebase Hosting (Classic). Use this when you want to deploy static web apps, Single Page Apps (SPAs), or simple microservices. Do NOT use for Firebase App Hosting.",
+    "source_type": "plugins",
+    "plugin": "firebase",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/firebase/skills/firebase_hosting_basics/SKILL.md",
+    "rel_path": "assets/plugins/firebase/skills/firebase_hosting_basics/SKILL.md"
+  },
+  {
+    "name": "firebase-remote-config-basics",
+    "description": "Comprehensive guide for Firebase Remote Config, including template management and SDK usage. Use this skill when the user needs help setting up Remote Config, managing feature flags, or updating app behavior dynamically.",
+    "source_type": "plugins",
+    "plugin": "firebase",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/firebase/skills/firebase_remote_config_basics/SKILL.md",
+    "rel_path": "assets/plugins/firebase/skills/firebase_remote_config_basics/SKILL.md"
+  },
+  {
+    "name": "firebase-security-rules-auditor",
+    "description": "A skill to evaluate how secure Firestore security rules are. Use this when Firestore security rules are updated to ensure that the generated rules are extremely secure and robust.",
+    "source_type": "plugins",
+    "plugin": "firebase",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/firebase/skills/firebase_security_rules_auditor/SKILL.md",
+    "rel_path": "assets/plugins/firebase/skills/firebase_security_rules_auditor/SKILL.md"
+  },
+  {
+    "name": "xcode-project-setup",
+    "description": "Safely modifies Xcode projects (.pbxproj) to add Swift Packages and link files. Use this skill whenever an iOS project needs dependencies installed (e.g. Firebase, Alamofire).",
+    "source_type": "plugins",
+    "plugin": "firebase",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/firebase/skills/xcode_project_setup/SKILL.md",
+    "rel_path": "assets/plugins/firebase/skills/xcode_project_setup/SKILL.md"
+  },
+  {
+    "name": "a11y-debugging",
+    "description": "Uses Chrome DevTools MCP for accessibility (a11y) debugging and auditing based on web.dev guidelines. Use when testing semantic HTML, ARIA labels, focus states, keyboard navigation, tap targets, and color contrast.",
+    "source_type": "plugins",
+    "plugin": "chrome-devtools-plugin",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/chrome-devtools-plugin/skills/a11y-debugging/SKILL.md",
+    "rel_path": "assets/plugins/chrome-devtools-plugin/skills/a11y-debugging/SKILL.md"
+  },
+  {
+    "name": "chrome-devtools",
+    "description": "Uses Chrome DevTools via MCP for efficient debugging, troubleshooting and browser automation. Use when debugging web pages, automating browser interactions, analyzing performance, or inspecting network requests. This skill does not apply to `--slim` mode (MCP configuration).",
+    "source_type": "plugins",
+    "plugin": "chrome-devtools-plugin",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/chrome-devtools-plugin/skills/chrome-devtools/SKILL.md",
+    "rel_path": "assets/plugins/chrome-devtools-plugin/skills/chrome-devtools/SKILL.md"
+  },
+  {
+    "name": "debug-optimize-lcp",
+    "description": "Guides debugging and optimizing Largest Contentful Paint (LCP) using Chrome DevTools MCP tools. Use this skill whenever the user asks about LCP performance, slow page loads, Core Web Vitals optimization, or wants to understand why their page's main content takes too long to appear. Also use when the user mentions \"largest contentful paint\", \"page load speed\", \"CWV\", or wants to improve how fast their hero image or main content renders.",
+    "source_type": "plugins",
+    "plugin": "chrome-devtools-plugin",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/chrome-devtools-plugin/skills/debug-optimize-lcp/SKILL.md",
+    "rel_path": "assets/plugins/chrome-devtools-plugin/skills/debug-optimize-lcp/SKILL.md"
+  },
+  {
+    "name": "memory-leak-debugging",
+    "description": "Diagnoses and resolves memory leaks in JavaScript/Node.js applications. Use when a user reports high memory usage, OOM errors, or wants to analyze heapsnapshots or run memory leak detection tools like memlab.",
+    "source_type": "plugins",
+    "plugin": "chrome-devtools-plugin",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/chrome-devtools-plugin/skills/memory-leak-debugging/SKILL.md",
+    "rel_path": "assets/plugins/chrome-devtools-plugin/skills/memory-leak-debugging/SKILL.md"
+  },
+  {
+    "name": "troubleshooting",
+    "description": "Uses Chrome DevTools MCP and documentation to troubleshoot connection and target issues. Trigger this skill when list_pages, new_page, or navigate_page fail, or when the server initialization fails.",
+    "source_type": "plugins",
+    "plugin": "chrome-devtools-plugin",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/chrome-devtools-plugin/skills/troubleshooting/SKILL.md",
+    "rel_path": "assets/plugins/chrome-devtools-plugin/skills/troubleshooting/SKILL.md"
+  },
+  {
+    "name": "android-cli",
+    "description": "Provides instructions for installing and using the `android` CLI. The `android` command-line tool is a critical tool for Android development and helps you create new Android projects, run Android apps on devices, manage and interact with Android virtual devices (including screenshots and UI inspection), manage Android SDK components, look up official Android documentation, and discover and install official Android skills.",
+    "source_type": "plugins",
+    "plugin": "android-cli-plugin",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/android-cli-plugin/skills/skills/SKILL.md",
+    "rel_path": "assets/plugins/android-cli-plugin/skills/skills/SKILL.md"
+  },
+  {
+    "name": "chrome-extensions",
+    "description": ">",
+    "source_type": "plugins",
+    "plugin": "modern-web-guidance-plugin",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/modern-web-guidance-plugin/skills/chrome-extensions/SKILL.md",
+    "rel_path": "assets/plugins/modern-web-guidance-plugin/skills/chrome-extensions/SKILL.md"
+  },
+  {
+    "name": "modern-web-guidance",
+    "description": "|",
+    "source_type": "plugins",
+    "plugin": "modern-web-guidance-plugin",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/modern-web-guidance-plugin/skills/modern-web-guidance/SKILL.md",
+    "rel_path": "assets/plugins/modern-web-guidance-plugin/skills/modern-web-guidance/SKILL.md"
+  },
+  {
+    "name": "google-antigravity-sdk",
+    "description": "Design, implement, and debug autonomous AI agents and multi-agent systems using the Google Antigravity (AGY) SDK. ACTIVATE this skill when the user wants to create, configure, or orchestrate Google Antigravity agents.",
+    "source_type": "plugins",
+    "plugin": "google-antigravity-sdk",
+    "skill_path": "/home/shado/Documents/Agentic/assets/plugins/google-antigravity-sdk/skills/google-antigravity-sdk/SKILL.md",
+    "rel_path": "assets/plugins/google-antigravity-sdk/skills/google-antigravity-sdk/SKILL.md"
+  },
+  {
+    "name": "agy-customizations",
+    "description": ">-",
+    "source_type": "builtin",
+    "plugin": "builtin",
+    "skill_path": "/home/shado/Documents/Agentic/assets/skills/agy-customizations/SKILL.md",
+    "rel_path": "assets/skills/agy-customizations/SKILL.md"
+  },
+  {
+    "name": "antigravity-guide",
+    "description": "Provides a comprehensive guide, quick reference, and sitemap for Google Antigravity (AGY), including the Antigravity CLI (agy), Antigravity 2.0, Antigravity IDE, Python SDK, slash commands, keybindings, and customizations (skills, rules, MCP, sidecars). Activate this skill when the user asks questions about how to use, configure, or customize Antigravity, AGY, the agy CLI, the Antigravity IDE, or Antigravity 2.0.",
+    "source_type": "builtin",
+    "plugin": "builtin",
+    "skill_path": "/home/shado/Documents/Agentic/assets/skills/antigravity_guide/SKILL.md",
+    "rel_path": "assets/skills/antigravity_guide/SKILL.md"
+  },
+  {
+    "name": "permissioned-github",
+    "description": "Guidelines for interacting with GitHub and request permissions from the user when commands fail due to restrictions in the agent environment.",
+    "source_type": "builtin",
+    "plugin": "builtin",
+    "skill_path": "/home/shado/Documents/Agentic/assets/skills/permissioned-github/SKILL.md",
+    "rel_path": "assets/skills/permissioned-github/SKILL.md"
+  }
+]
