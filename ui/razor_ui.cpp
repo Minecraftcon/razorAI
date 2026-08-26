@@ -1160,7 +1160,10 @@ void RazorUI::Run() {
                         selected_command_index_ = 0;
                         return true;
                     } else if (chosen == "skills" || chosen == "skill") {
-                        prompt_value_ = "/skill ";
+                        show_skill_picker_ = true;
+                        skill_search_query_ = "";
+                        skill_menu_selected_ = 0;
+                        prompt_value_.clear();
                         selected_command_index_ = 0;
                         return true;
                     } else if (chosen == "clear") {
@@ -1230,6 +1233,16 @@ void RazorUI::Run() {
                         }
                     }
 
+                    if (cmd == "skills" || cmd == "skill") {
+                        if (arg.empty()) {
+                            show_skill_picker_ = true;
+                            skill_search_query_ = "";
+                            skill_menu_selected_ = 0;
+                            last_keypress_ = std::chrono::steady_clock::now();
+                            return true;
+                        }
+                    }
+
                     std::string local_response = "";
                     if (cmd == "help") {
                         local_response = 
@@ -1238,7 +1251,7 @@ void RazorUI::Run() {
                             "| :--- | :--- |\n"
                             "| `/models`, `/model` | Open interactive model switcher (arrow keys + Enter) |\n"
                             "| `/model [name|idx]` | Switch directly to model by name or index |\n"
-                            "| `/skills [filter]` | Discover and list global and workspace skills |\n"
+                            "| `/skills`, `/skill` | Open interactive skill search & scroll modal |\n"
                             "| `/skill <name>` | View detailed instructions for a specific skill |\n"
                             "| `[S: <name>] <prompt>` | Execute prompt with specialized skill instructions |\n"
                             "| `/tasks` | View active and background task processes table |\n"
@@ -1269,14 +1282,8 @@ void RazorUI::Run() {
                                 local_response = "Error: Model '" + arg + "' not found in configuration.";
                             }
                         }
-                    } else if (cmd == "skills") {
-                        local_response = SkillManager::Instance().FormatSkillsList(arg);
-                    } else if (cmd == "skill") {
-                        if (arg.empty()) {
-                            local_response = SkillManager::Instance().FormatSkillsList("");
-                        } else {
-                            local_response = SkillManager::Instance().GetSkillContent(arg);
-                        }
+                    } else if (cmd == "skills" || cmd == "skill") {
+                        local_response = SkillManager::Instance().GetSkillContent(arg);
                     } else if (cmd == "tasks") {
                         std::string table = TaskManager::Instance().FormatTaskTable(current_session_id_);
                         if (table.empty()) {
@@ -1688,6 +1695,96 @@ void RazorUI::Run() {
             Element picker_view = picker_box | clear_under | center;
             return dbox({main_view, picker_view});
         }
+
+        if (show_skill_picker_.load()) {
+            auto all_skills = SkillManager::Instance().DiscoverSkills();
+            std::vector<SkillInfo> filtered_skills;
+            std::string q_lower = skill_search_query_;
+            std::transform(q_lower.begin(), q_lower.end(), q_lower.begin(), ::tolower);
+            
+            for (const auto& s : all_skills) {
+                std::string s_name_lower = s.name;
+                std::transform(s_name_lower.begin(), s_name_lower.end(), s_name_lower.begin(), ::tolower);
+                std::string s_desc_lower = s.description;
+                std::transform(s_desc_lower.begin(), s_desc_lower.end(), s_desc_lower.begin(), ::tolower);
+                
+                if (q_lower.empty() || s_name_lower.find(q_lower) != std::string::npos || s_desc_lower.find(q_lower) != std::string::npos || s.plugin_or_source.find(q_lower) != std::string::npos) {
+                    filtered_skills.push_back(s);
+                }
+            }
+
+            if (skill_menu_selected_ >= (int)filtered_skills.size()) {
+                skill_menu_selected_ = std::max(0, (int)filtered_skills.size() - 1);
+            }
+
+            int visible_count = 8;
+            int start_idx = 0;
+            if ((int)filtered_skills.size() > visible_count) {
+                start_idx = std::max(0, skill_menu_selected_ - visible_count / 2);
+                if (start_idx + visible_count > (int)filtered_skills.size()) {
+                    start_idx = (int)filtered_skills.size() - visible_count;
+                }
+            }
+            int end_idx = std::min((int)filtered_skills.size(), start_idx + visible_count);
+
+            Elements skill_items;
+            if (filtered_skills.empty()) {
+                skill_items.push_back(text("  No skills found matching '" + skill_search_query_ + "'") | color(Color::GrayDark));
+            } else {
+                for (int i = start_idx; i < end_idx; ++i) {
+                    bool is_highlighted = (i == skill_menu_selected_);
+                    const auto& sk = filtered_skills[i];
+                    
+                    std::string desc = sk.description;
+                    if (desc.size() > 62) desc = desc.substr(0, 59) + "...";
+                    if (desc.empty()) desc = "Custom skill instructions";
+
+                    std::string prefix = is_highlighted ? " > " : "   ";
+                    
+                    Element row_elem;
+                    if (is_highlighted) {
+                        row_elem = hbox({
+                            text(prefix + sk.name) | bold | color(Color::Black),
+                            text(" [" + sk.plugin_or_source + "] ") | bold | color(Color::RGB(50, 20, 50)),
+                            text("- " + desc) | color(Color::RGB(30, 30, 30)),
+                        }) | bgcolor(Color::MagentaLight);
+                    } else {
+                        row_elem = hbox({
+                            text(prefix + sk.name) | bold | color(Color::MagentaLight),
+                            text(" [" + sk.plugin_or_source + "] ") | color(Color::CyanLight),
+                            text("- " + desc) | color(Color::GrayLight),
+                        });
+                    }
+                    skill_items.push_back(row_elem);
+                }
+            }
+
+            std::string counter_text = "Skills: " + std::to_string(filtered_skills.size()) + " total";
+            if (!filtered_skills.empty()) {
+                counter_text += " (" + std::to_string(skill_menu_selected_ + 1) + "/" + std::to_string(filtered_skills.size()) + ")";
+            }
+
+            Element picker_box = vbox({
+                hbox({
+                    text(" SELECT AGENT SKILL ") | bold | color(Color::Black) | bgcolor(Color::MagentaLight),
+                    text("  " + counter_text) | color(Color::GrayLight) | flex,
+                }) | bgcolor(Color::RGB(35, 20, 35)),
+                separatorLight() | color(Color::GrayDark),
+                hbox({
+                    text(" Search: ") | bold | color(Color::CyanLight),
+                    text(skill_search_query_.empty() ? "(Type to filter skills...)" : skill_search_query_) | (skill_search_query_.empty() ? color(Color::GrayDark) : color(Color::White) | bold),
+                    text("█") | color(Color::CyanLight),
+                }) | bgcolor(Color::RGB(25, 25, 25)),
+                separatorLight() | color(Color::GrayDark),
+                vbox(std::move(skill_items)) | size(HEIGHT, EQUAL, 8),
+                separatorLight() | color(Color::GrayDark),
+                text("↑/↓/PgUp/PgDn: Scroll • Type: Filter • Backspace: Del • Enter: Select • Esc: Type normally") | color(Color::GrayLight) | center
+            }) | borderRounded | bgcolor(Color::RGB(18, 18, 18)) | size(WIDTH, GREATER_THAN, 80);
+
+            Element picker_view = picker_box | clear_under | center;
+            return dbox({main_view, picker_view});
+        }
+
         return main_view;
     });
 
@@ -1723,6 +1820,76 @@ void RazorUI::Run() {
                     msg.streamed_length = msg.response.size();
                     history_.push_back(msg);
                 }
+                last_keypress_ = std::chrono::steady_clock::now();
+                return true;
+            }
+            return true;
+        }
+
+        if (show_skill_picker_.load()) {
+            auto all_skills = SkillManager::Instance().DiscoverSkills();
+            std::vector<SkillInfo> filtered_skills;
+            std::string q_lower = skill_search_query_;
+            std::transform(q_lower.begin(), q_lower.end(), q_lower.begin(), ::tolower);
+            
+            for (const auto& s : all_skills) {
+                std::string s_name_lower = s.name;
+                std::transform(s_name_lower.begin(), s_name_lower.end(), s_name_lower.begin(), ::tolower);
+                std::string s_desc_lower = s.description;
+                std::transform(s_desc_lower.begin(), s_desc_lower.end(), s_desc_lower.begin(), ::tolower);
+                
+                if (q_lower.empty() || s_name_lower.find(q_lower) != std::string::npos || s_desc_lower.find(q_lower) != std::string::npos || s.plugin_or_source.find(q_lower) != std::string::npos) {
+                    filtered_skills.push_back(s);
+                }
+            }
+
+            if (event == Event::Escape) {
+                show_skill_picker_ = false;
+                last_keypress_ = std::chrono::steady_clock::now();
+                return true;
+            }
+            if (event == Event::ArrowUp) {
+                skill_menu_selected_ = std::max(0, skill_menu_selected_ - 1);
+                last_keypress_ = std::chrono::steady_clock::now();
+                return true;
+            }
+            if (event == Event::ArrowDown) {
+                skill_menu_selected_ = std::min((int)filtered_skills.size() - 1, skill_menu_selected_ + 1);
+                last_keypress_ = std::chrono::steady_clock::now();
+                return true;
+            }
+            if (event == Event::PageUp) {
+                skill_menu_selected_ = std::max(0, skill_menu_selected_ - 8);
+                last_keypress_ = std::chrono::steady_clock::now();
+                return true;
+            }
+            if (event == Event::PageDown) {
+                skill_menu_selected_ = std::min((int)filtered_skills.size() - 1, skill_menu_selected_ + 8);
+                last_keypress_ = std::chrono::steady_clock::now();
+                return true;
+            }
+            if (event == Event::Backspace || event == Event::Character('\x7f') || event == Event::Special("\x7f")) {
+                if (!skill_search_query_.empty()) {
+                    skill_search_query_.pop_back();
+                    skill_menu_selected_ = 0;
+                }
+                last_keypress_ = std::chrono::steady_clock::now();
+                return true;
+            }
+            if (event == Event::Return) {
+                if (!filtered_skills.empty() && skill_menu_selected_ >= 0 && skill_menu_selected_ < (int)filtered_skills.size()) {
+                    std::string chosen_skill = filtered_skills[skill_menu_selected_].name;
+                    show_skill_picker_ = false;
+                    prompt_value_ = "[S: " + chosen_skill + "] ";
+                } else {
+                    show_skill_picker_ = false;
+                }
+                last_keypress_ = std::chrono::steady_clock::now();
+                return true;
+            }
+            if (event.is_character() && event.character() != "\n" && event.character() != "\r") {
+                skill_search_query_ += event.character();
+                skill_menu_selected_ = 0;
                 last_keypress_ = std::chrono::steady_clock::now();
                 return true;
             }

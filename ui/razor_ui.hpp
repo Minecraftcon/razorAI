@@ -85,6 +85,11 @@ private:
     std::atomic<int> selected_model_idx_{0};
     int model_menu_selected_ = 0;
 
+    // Skill Picker State
+    std::atomic<bool> show_skill_picker_{false};
+    std::string skill_search_query_ = "";
+    int skill_menu_selected_ = 0;
+
     // Paste buffering state
     std::string pasted_buffer_ = "";
     int paste_line_count_ = 0;
