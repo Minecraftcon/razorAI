@@ -145,7 +145,28 @@ void ProcessAndExecute(razor::RazorUI& ui, std::string api_response) {
             inner_response = api_response;
         }
         
-        json parsed_resp = json::parse(inner_response);
+        json parsed_resp;
+        try {
+            parsed_resp = json::parse(inner_response);
+        } catch (...) {
+            // Check for markdown json block
+            size_t start = inner_response.find("```json");
+            if (start == std::string::npos) start = inner_response.find("```");
+            if (start != std::string::npos) {
+                size_t json_start = inner_response.find_first_of("[{", start);
+                size_t end = inner_response.find("```", json_start);
+                if (json_start != std::string::npos && end != std::string::npos) {
+                    try {
+                        parsed_resp = json::parse(inner_response.substr(json_start, end - json_start));
+                    } catch (...) {}
+                }
+            }
+        }
+
+        if (parsed_resp.is_object() && parsed_resp.contains("tool") && parsed_resp.contains("args")) {
+            parsed_resp = json::array({parsed_resp});
+        }
+        
         if (parsed_resp.is_array()) {
             is_tool_call = true;
             
@@ -180,7 +201,7 @@ void ProcessAndExecute(razor::RazorUI& ui, std::string api_response) {
                             result_payload["tool_result"] = true;
                             result_payload["tool_call_id"] = tool_call_id;
                             result_payload["name"] = tool;
-                            result_payload["prompt"] = res.output;
+                            result_payload["prompt"] = res.output.empty() ? "(Command executed successfully with exit code " + std::to_string(res.exit_code) + " and no output)" : res.output;
                             
                             results_array.push_back(result_payload);
                             should_continue_any = true;
@@ -207,19 +228,18 @@ void ProcessAndExecute(razor::RazorUI& ui, std::string api_response) {
                                 std::string msg;
                                 bool ok = razor::TaskManager::Instance().SendKeycode(task_id, input, msg);
                                 output = msg;
-                                tag = "[TOOL_EXECUTION:manage_task_send_keycode|STATUS:" + std::string(ok ? "0" : "1") + "|NAME:" + readable_name + "|ID:" + task_id + "]";
+                                tag = "[TOOL_EXECUTION:manage_task_send|STATUS:" + std::string(ok ? "0" : "1") + "|NAME:" + readable_name + "|ID:" + task_id + "]";
                             } else {
-                                output = "Error: Unknown action '" + action + "'. Valid actions are 'view', 'kill', 'send_keycode'.";
-                                tag = "[TOOL_EXECUTION_ERROR] Unknown action: " + action;
+                                output = "Error: Invalid action '" + action + "'. Valid actions: view, kill, send_keycode.";
+                                tag = "[TOOL_EXECUTION_ERROR] Invalid task action: " + action;
                             }
-                            
                             ui.ProvideResponse(tag);
                             
                             json result_payload;
                             result_payload["tool_result"] = true;
                             result_payload["tool_call_id"] = tool_call_id;
                             result_payload["name"] = tool;
-                            result_payload["prompt"] = output;
+                            result_payload["prompt"] = output.empty() ? "(Task action completed with no output)" : output;
                             
                             results_array.push_back(result_payload);
                             should_continue_any = true;
@@ -227,22 +247,15 @@ void ProcessAndExecute(razor::RazorUI& ui, std::string api_response) {
                     } else if (tool == "list_dir" || tool == "list_directory" || tool == "list_files" || tool == "ls") {
                         std::string dir_path = ".";
                         if (tc.contains("args")) {
-                            if (tc["args"].contains("path") && tc["args"]["path"].is_string()) {
-                                dir_path = tc["args"]["path"].get<std::string>();
-                            } else if (tc["args"].contains("dir_path") && tc["args"]["dir_path"].is_string()) {
-                                dir_path = tc["args"]["dir_path"].get<std::string>();
-                            }
+                            if (tc["args"].contains("path")) dir_path = tc["args"]["path"].get<std::string>();
+                            else if (tc["args"].contains("dir_path")) dir_path = tc["args"]["dir_path"].get<std::string>();
                         }
                         std::string tag = "[TOOL_EXECUTION:list_dir|STATUS:0] " + dir_path;
                         ui.ProvideResponse(tag);
                         
                         auto list_res = razor::FileInspector::ListDirectory(dir_path);
-                        std::string output;
-                        if (!list_res.error_message.empty()) {
-                            output = "Error listing directory: " + list_res.error_message;
-                        } else {
-                            output = list_res.formatted_table;
-                        }
+                        std::string output = list_res.error_message.empty() ? list_res.formatted_table : "Error: " + list_res.error_message;
+                        if (output.empty()) output = "(Directory is empty)";
                         
                         json result_payload;
                         result_payload["tool_result"] = true;
@@ -264,6 +277,7 @@ void ProcessAndExecute(razor::RazorUI& ui, std::string api_response) {
                                 std::stringstream buffer;
                                 buffer << f.rdbuf();
                                 output = buffer.str();
+                                if (output.empty()) output = "(File is empty)";
                             }
                             f.close();
                             
@@ -366,6 +380,19 @@ void ProcessAndExecute(razor::RazorUI& ui, std::string api_response) {
     }
 
     if (!is_tool_call) {
+        // If the model literally output a bare tool name (e.g. "run_command" or "write_file") after a tool execution, auto-reprompt it to continue instead of halting!
+        std::string trimmed_resp = inner_response;
+        trimmed_resp.erase(0, trimmed_resp.find_first_not_of(" \t\r\n`'\""));
+        trimmed_resp.erase(trimmed_resp.find_last_not_of(" \t\r\n`'\"") + 1);
+        
+        if (trimmed_resp == "run_command" || trimmed_resp == "write_file" || trimmed_resp == "read_file" || trimmed_resp == "list_dir" || trimmed_resp == "manage_task" || trimmed_resp == "replace_file_content") {
+            ui.StartThinking("Primary Model");
+            std::string reprompt = "[SYSTEM NOTE]: You outputted the raw tool name '" + trimmed_resp + "' as text. Please proceed with invoking the tool with proper arguments or provide your final response to the user.";
+            std::string next_resp = SendToDaemonSync(reprompt, &ui, 0, 0, ui.GetSessionId());
+            ProcessAndExecute(ui, next_resp);
+            return;
+        }
+
         if (!inner_response.empty()) {
             ui.ProvideResponse(inner_response);
         } else {

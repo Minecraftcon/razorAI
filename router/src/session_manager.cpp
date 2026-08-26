@@ -163,7 +163,12 @@ std::vector<nlohmann::json> SessionManager::GetHistory(const std::string& sessio
                                 msg["role"] = "tool";
                                 if (tr.contains("tool_call_id")) msg["tool_call_id"] = tr["tool_call_id"];
                                 if (tr.contains("name")) msg["name"] = tr["name"];
-                                if (tr.contains("prompt")) msg["content"] = tr["prompt"];
+                                if (tr.contains("prompt")) {
+                                    std::string p_str = tr["prompt"].get<std::string>();
+                                    msg["content"] = p_str.empty() ? "(Tool executed successfully with no output)" : p_str;
+                                } else {
+                                    msg["content"] = "(Tool executed successfully with no output)";
+                                }
                                 history.push_back(msg);
                             }
                         }
@@ -174,7 +179,12 @@ std::vector<nlohmann::json> SessionManager::GetHistory(const std::string& sessio
                             msg["role"] = "tool";
                             if (upj.contains("tool_call_id")) msg["tool_call_id"] = upj["tool_call_id"];
                             if (upj.contains("name")) msg["name"] = upj["name"];
-                            if (upj.contains("prompt")) msg["content"] = upj["prompt"];
+                            if (upj.contains("prompt")) {
+                                std::string p_str = upj["prompt"].get<std::string>();
+                                msg["content"] = p_str.empty() ? "(Tool executed successfully with no output)" : p_str;
+                            } else {
+                                msg["content"] = "(Tool executed successfully with no output)";
+                            }
                             history.push_back(msg);
                         }
                     }
@@ -212,10 +222,13 @@ std::vector<nlohmann::json> SessionManager::GetHistory(const std::string& sessio
                 } catch (...) {}
                 
                 if (!is_tc && !resp.empty() && resp.find("[Router Output]") == std::string::npos) {
-                    nlohmann::json msg;
-                    msg["role"] = "assistant";
-                    msg["content"] = resp;
-                    history.push_back(msg);
+                    // Skip corrupt raw tool names like "run_command" that were generated due to empty tool results
+                    if (resp != "run_command" && resp != "write_file" && resp != "read_file" && resp != "list_dir" && resp != "manage_task" && resp != "replace_file_content") {
+                        nlohmann::json msg;
+                        msg["role"] = "assistant";
+                        msg["content"] = resp;
+                        history.push_back(msg);
+                    }
                 }
             }
         } catch (...) {}

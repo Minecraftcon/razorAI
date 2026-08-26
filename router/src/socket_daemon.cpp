@@ -460,9 +460,10 @@ std::string SocketDaemon::ProcessRequestJson(const std::string& request_json, in
                         tool_msg["name"] = tr["name"].get<std::string>();
                     }
                     if (tr.contains("prompt") && tr["prompt"].is_string()) {
-                        tool_msg["content"] = tr["prompt"].get<std::string>();
+                        std::string p_str = tr["prompt"].get<std::string>();
+                        tool_msg["content"] = p_str.empty() ? "(Tool executed successfully with no output)" : p_str;
                     } else {
-                        tool_msg["content"] = "";
+                        tool_msg["content"] = "(Tool executed successfully with no output)";
                     }
                     payload["messages"].push_back(tool_msg);
                 }
@@ -477,12 +478,13 @@ std::string SocketDaemon::ProcessRequestJson(const std::string& request_json, in
                     tool_msg["name"] = p_json["name"].get<std::string>();
                 }
                 if (p_json.contains("prompt") && p_json["prompt"].is_string()) {
-                    tool_msg["content"] = p_json["prompt"].get<std::string>();
+                    std::string p_str = p_json["prompt"].get<std::string>();
+                    tool_msg["content"] = p_str.empty() ? "(Tool executed successfully with no output)" : p_str;
                 } else {
-                    tool_msg["content"] = "";
+                    tool_msg["content"] = "(Tool executed successfully with no output)";
                 }
             } catch (...) {
-                tool_msg["content"] = prompt;
+                tool_msg["content"] = prompt.empty() ? "(Tool executed successfully with no output)" : prompt;
             }
             payload["messages"].push_back(tool_msg);
         } else {
