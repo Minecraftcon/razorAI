@@ -204,6 +204,77 @@ static Element ParseInline(const std::string& line) {
         } else if (line[i] == '`') {
             flush_chunk();
             is_code = !is_code;
+        } else if (line[i] == '[') {
+            size_t close_bracket = line.find(']', i + 1);
+            if (close_bracket != std::string::npos && close_bracket + 1 < line.size() && line[close_bracket + 1] == '(') {
+                size_t close_paren = line.find(')', close_bracket + 2);
+                if (close_paren != std::string::npos) {
+                    std::string link_text = line.substr(i + 1, close_bracket - (i + 1));
+                    std::string link_url = line.substr(close_bracket + 2, close_paren - (close_bracket + 2));
+                    
+                    flush_chunk();
+                    if (!current_word_elements.empty()) {
+                        hflow_elements.push_back(hbox(std::move(current_word_elements)));
+                        current_word_elements.clear();
+                    }
+
+                    Elements link_parts;
+                    link_parts.push_back(text(link_text) | color(Color::RGB(75, 184, 252)) | underlined | bold);
+                    if (!link_url.empty() && link_url != link_text) {
+                        link_parts.push_back(text(" ↗") | color(Color::RGB(75, 184, 252)));
+                        link_parts.push_back(text(" (" + link_url + ")") | color(Color::RGB(130, 140, 155)) | dim);
+                    }
+                    
+                    hflow_elements.push_back(hbox(std::move(link_parts)));
+                    i = close_paren;
+                    continue;
+                }
+            }
+            current_chunk += line[i];
+        } else if (line[i] == '<') {
+            size_t close_angle = line.find('>', i + 1);
+            if (close_angle != std::string::npos) {
+                std::string inner = line.substr(i + 1, close_angle - (i + 1));
+                if (inner.rfind("http://", 0) == 0 || inner.rfind("https://", 0) == 0 || inner.rfind("file://", 0) == 0) {
+                    flush_chunk();
+                    if (!current_word_elements.empty()) {
+                        hflow_elements.push_back(hbox(std::move(current_word_elements)));
+                        current_word_elements.clear();
+                    }
+                    hflow_elements.push_back(
+                        hbox({
+                            text(inner) | color(Color::RGB(75, 184, 252)) | underlined | bold,
+                            text(" ↗") | color(Color::RGB(75, 184, 252))
+                        })
+                    );
+                    i = close_angle;
+                    continue;
+                }
+            }
+            current_chunk += line[i];
+        } else if (line.compare(i, 8, "https://") == 0 || line.compare(i, 7, "http://") == 0 || line.compare(i, 7, "file://") == 0) {
+            size_t url_end = line.find_first_of(" \t\r\n)]<>\"", i);
+            if (url_end == std::string::npos) url_end = line.size();
+            std::string raw_url = line.substr(i, url_end - i);
+            
+            while (!raw_url.empty() && (raw_url.back() == '.' || raw_url.back() == ',' || raw_url.back() == ';')) {
+                raw_url.pop_back();
+                url_end--;
+            }
+
+            flush_chunk();
+            if (!current_word_elements.empty()) {
+                hflow_elements.push_back(hbox(std::move(current_word_elements)));
+                current_word_elements.clear();
+            }
+            hflow_elements.push_back(
+                hbox({
+                    text(raw_url) | color(Color::RGB(75, 184, 252)) | underlined | bold,
+                    text(" ↗") | color(Color::RGB(75, 184, 252))
+                })
+            );
+            i = url_end - 1;
+            continue;
         } else {
             current_chunk += line[i];
         }
