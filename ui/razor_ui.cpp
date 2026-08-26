@@ -976,18 +976,29 @@ void RazorUI::Run() {
                     current_matches.push_back(m);
                 }
             }
-        } else if (prompt_value_.rfind("/skill ", 0) == 0) {
-            std::string term = prompt_value_.substr(7);
+        } else if (prompt_value_.rfind("/skill ", 0) == 0 || prompt_value_.rfind("/skills ", 0) == 0) {
+            std::string term = (prompt_value_.rfind("/skills ", 0) == 0) ? prompt_value_.substr(8) : prompt_value_.substr(7);
             auto skills = SkillManager::Instance().SearchSkills(term);
             for (const auto& s : skills) {
                 current_matches.push_back(s.name);
             }
         } else if (prompt_value_.find(' ') == std::string::npos) {
             std::string search_term = prompt_value_.substr(1);
+            std::string search_lower = search_term;
+            std::transform(search_lower.begin(), search_lower.end(), search_lower.begin(), ::tolower);
+            
             std::vector<std::string> all_commands = {"models", "model", "skills", "skill", "tasks", "session", "clear", "help"};
             for (const auto& cmd : all_commands) {
-                if (search_term.empty() || cmd.find(search_term) == 0) {
+                if (search_term.empty() || cmd.find(search_lower) == 0) {
                     current_matches.push_back(cmd);
+                }
+            }
+
+            // Also search all registered skills by name / prefix!
+            auto skills = SkillManager::Instance().SearchSkills(search_term);
+            for (const auto& s : skills) {
+                if (std::find(current_matches.begin(), current_matches.end(), s.name) == current_matches.end()) {
+                    current_matches.push_back(s.name);
                 }
             }
         }
@@ -1118,18 +1129,52 @@ void RazorUI::Run() {
             }
         }
 
-        if (event == Event::Tab) {
-            auto current_matches = get_autocomplete_state();
-            if (!current_matches.empty() && selected_command_index_.load() < (int)current_matches.size()) {
-                std::string match = current_matches[selected_command_index_.load()];
-                if (prompt_value_.rfind("/model", 0) == 0) {
-                    prompt_value_ = "/model " + match;
-                } else if (prompt_value_.rfind("/skill", 0) == 0) {
-                    prompt_value_ = "/skill " + match;
-                } else {
-                    prompt_value_ = "/" + match + " ";
-                }
+        auto current_matches = get_autocomplete_state();
+        if (!current_matches.empty()) {
+            if (event == Event::ArrowUp) {
+                selected_command_index_ = std::max(0, selected_command_index_.load() - 1);
                 return true;
+            }
+            if (event == Event::ArrowDown) {
+                selected_command_index_ = std::min((int)current_matches.size() - 1, selected_command_index_.load() + 1);
+                return true;
+            }
+            if (event == Event::Return || event == Event::Tab) {
+                if (selected_command_index_.load() < (int)current_matches.size()) {
+                    std::string chosen = current_matches[selected_command_index_.load()];
+                    
+                    // Check if chosen is a skill
+                    const auto* sk = SkillManager::Instance().GetSkill(chosen);
+                    if (sk != nullptr || prompt_value_.rfind("/skill", 0) == 0) {
+                        std::string sname = sk ? sk->name : chosen;
+                        prompt_value_ = "[S: " + sname + "] ";
+                        selected_command_index_ = 0;
+                        return true;
+                    }
+                    
+                    // If it's a command
+                    if (chosen == "models" || chosen == "model") {
+                        model_menu_selected_ = selected_model_idx_.load();
+                        show_model_picker_ = true;
+                        prompt_value_.clear();
+                        selected_command_index_ = 0;
+                        return true;
+                    } else if (chosen == "skills" || chosen == "skill") {
+                        prompt_value_ = "/skill ";
+                        selected_command_index_ = 0;
+                        return true;
+                    } else if (chosen == "clear") {
+                        std::lock_guard<std::mutex> lock(history_mutex_);
+                        history_.clear();
+                        prompt_value_.clear();
+                        selected_command_index_ = 0;
+                        return true;
+                    } else {
+                        prompt_value_ = "/" + chosen + " ";
+                        selected_command_index_ = 0;
+                        return true;
+                    }
+                }
             }
         }
 
@@ -1195,6 +1240,7 @@ void RazorUI::Run() {
                             "| `/model [name|idx]` | Switch directly to model by name or index |\n"
                             "| `/skills [filter]` | Discover and list global and workspace skills |\n"
                             "| `/skill <name>` | View detailed instructions for a specific skill |\n"
+                            "| `[S: <name>] <prompt>` | Execute prompt with specialized skill instructions |\n"
                             "| `/tasks` | View active and background task processes table |\n"
                             "| `/session` | View current session metadata and statistics |\n"
                             "| `/clear` | Clear terminal chat history |\n"
@@ -1262,11 +1308,31 @@ void RazorUI::Run() {
                     }
                 }
 
+                // Check for [S: <skill_name>] or [Skill: <skill_name>] prompt transformation
+                std::string backend_prompt = full_prompt;
+                if (full_prompt.rfind("[S: ", 0) == 0 || full_prompt.rfind("[Skill: ", 0) == 0) {
+                    size_t prefix_len = (full_prompt.rfind("[S: ", 0) == 0) ? 4 : 8;
+                    size_t close_b = full_prompt.find(']', prefix_len);
+                    if (close_b != std::string::npos) {
+                        std::string skill_name = full_prompt.substr(prefix_len, close_b - prefix_len);
+                        skill_name.erase(0, skill_name.find_first_not_of(" \t\r\n"));
+                        skill_name.erase(skill_name.find_last_not_of(" \t\r\n") + 1);
+
+                        std::string user_rest = full_prompt.substr(close_b + 1);
+                        user_rest.erase(0, user_rest.find_first_not_of(" \t\r\n"));
+
+                        const auto* sk = SkillManager::Instance().GetSkill(skill_name);
+                        if (sk) {
+                            backend_prompt = "Skill:" + sk->path + (user_rest.empty() ? "" : " " + user_rest);
+                        }
+                    }
+                }
+
                 if (IsModelThinking()) {
                     // Model is currently working: queue it above the input bar!
                     {
                         std::lock_guard<std::mutex> lock(steer_mutex_);
-                        queued_steer_prompt_ = full_prompt;
+                        queued_steer_prompt_ = backend_prompt;
                     }
                     last_keypress_ = std::chrono::steady_clock::now();
                     return true;
@@ -1281,7 +1347,7 @@ void RazorUI::Run() {
                         history_.push_back(msg);
                     }
                     if (submit_callback_) {
-                        submit_callback_(full_prompt);
+                        submit_callback_(backend_prompt);
                     }
                     last_keypress_ = std::chrono::steady_clock::now();
                     return true;
@@ -1515,25 +1581,26 @@ void RazorUI::Run() {
                     std::string label = prefix + current_matches[i] + (is_active ? " [Active]" : "");
                     matching_elements.push_back(text(label) | color(col));
                 }
-            } else if (prompt_value_.rfind("/skill", 0) == 0) {
-                matching_elements.push_back(text("Skills (select or type):") | bold | color(Color::MagentaLight));
-                size_t limit = std::min(current_matches.size(), (size_t)10);
+            } else {
+                matching_elements.push_back(text("Suggestions (Arrow keys to navigate, Enter/Tab to select):") | bold | color(Color::CyanLight));
+                size_t limit = std::min(current_matches.size(), (size_t)12);
                 for (size_t i = 0; i < limit; ++i) {
                     bool is_selected = (i == (size_t)selected_command_index_.load());
-                    auto col = is_selected ? Color::MagentaLight : Color::Magenta;
-                    auto prefix = is_selected ? "  > " : "    ";
-                    matching_elements.push_back(text(prefix + current_matches[i]) | color(col));
+                    const auto* sk = SkillManager::Instance().GetSkill(current_matches[i]);
+                    bool is_skill = (sk != nullptr);
+                    
+                    auto col = is_selected ? (is_skill ? Color::MagentaLight : Color::CyanLight) : (is_skill ? Color::Magenta : Color::Cyan);
+                    std::string prefix = is_selected ? "  > " : "    ";
+                    std::string label = prefix;
+                    if (is_skill) {
+                        label += "[Skill] " + current_matches[i] + " (" + sk->plugin_or_source + ")";
+                    } else {
+                        label += "/" + current_matches[i];
+                    }
+                    matching_elements.push_back(text(label) | color(col));
                 }
                 if (current_matches.size() > limit) {
-                    matching_elements.push_back(text("    ... (" + std::to_string(current_matches.size() - limit) + " more skills)") | color(Color::GrayDark));
-                }
-            } else {
-                matching_elements.push_back(text("Slash Commands:") | bold | color(Color::CyanLight));
-                for (size_t i = 0; i < current_matches.size(); ++i) {
-                    bool is_selected = (i == (size_t)selected_command_index_.load());
-                    auto col = is_selected ? Color::CyanLight : Color::Cyan;
-                    auto prefix = is_selected ? "  > /" : "    /";
-                    matching_elements.push_back(text(prefix + current_matches[i]) | color(col));
+                    matching_elements.push_back(text("    ... (" + std::to_string(current_matches.size() - limit) + " more suggestions)") | color(Color::GrayDark));
                 }
             }
         }

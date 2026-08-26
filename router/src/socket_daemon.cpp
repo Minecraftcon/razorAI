@@ -218,6 +218,26 @@ std::string SocketDaemon::ProcessRequestJson(const std::string& request_json, in
         
         sys_prompts = model_config_.global_sysprompt;
         
+        // If an active skill was invoked via "Skill:<path>", automatically load and inject it!
+        if (prompt.rfind("Skill:", 0) == 0) {
+            size_t space_idx = prompt.find(' ', 6);
+            std::string skill_path = (space_idx != std::string::npos) ? prompt.substr(6, space_idx - 6) : prompt.substr(6);
+            
+            std::ifstream sk_file(skill_path);
+            if (sk_file.is_open()) {
+                std::stringstream sk_buf;
+                sk_buf << sk_file.rdbuf();
+                std::string sk_content = sk_buf.str();
+                
+                sys_prompts.push_back(
+                    "ACTIVE SKILL DIRECTIVE (" + skill_path + "):\n"
+                    "The user has activated a specialized skill for this request.\n\n"
+                    "```markdown\n" + sk_content + "\n```\n\n"
+                    "CRITICAL: Follow all guidelines, workflows, best practices, and scripts specified in this skill to accomplish the user's request."
+                );
+            }
+        }
+
         sys_prompts.push_back(
             "IDENTITY & WORKFLOW:\n"
             "You are Razor, an intelligent pair-programming engineer working inside an interactive terminal environment. "
@@ -253,6 +273,8 @@ std::string SocketDaemon::ProcessRequestJson(const std::string& request_json, in
             "  * NEVER append '&', 'nohup', 'disown', 'screen', or 'tmux' to commands. The built-in Task Manager automatically manages and tracks background execution with PTY logging.\n"
             "- BACKGROUND TASKS MANAGEMENT:\n"
             "  * Use 'manage_task' with action='view' to check status/logs, 'send_keycode' to send stdin input, and 'kill' to terminate background jobs.\n"
+            "- SKILL EXECUTION:\n"
+            "  * When a skill is activated (via 'Skill:<path>'), strictly follow the specialized procedures, references, and scripts defined in that skill.\n"
         );
 
         std::vector<std::string> combined_tools;

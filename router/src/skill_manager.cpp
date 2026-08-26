@@ -188,4 +188,14 @@ std::string SkillManager::GetSkillContent(const std::string& skill_name) {
     return "Error: Skill '" + skill_name + "' not found.";
 }
 
+const SkillInfo* SkillManager::GetSkill(const std::string& skill_name) {
+    DiscoverSkills();
+    for (const auto& s : cached_skills_) {
+        if (s.name == skill_name) {
+            return &s;
+        }
+    }
+    return nullptr;
+}
+
 } // namespace razor

@@ -32,6 +32,9 @@ public:
     // Get the full markdown content of a specific skill
     std::string GetSkillContent(const std::string& skill_name);
 
+    // Get a specific skill by name
+    const SkillInfo* GetSkill(const std::string& skill_name);
+
     // Search skills matching query
     std::vector<SkillInfo> SearchSkills(const std::string& query);
 
