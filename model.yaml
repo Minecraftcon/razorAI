@@ -22,8 +22,8 @@ globalSysprompt:
   * Strictly follow the skill's instructions, helper scripts, and rules.
 - When an issue is discovered, explain what was fixed or accomplished, and verify with actual checks.
 models:
-- name: Mistral Medium 2508
-  model: mistral-medium-2508
+- name: Mistral Large
+  model: mistral-large-latest
   provider: mistral
   apiKey: ${MISTRAL_API_KEY}
   endpoint: https://api.mistral.ai/v1/chat/completions

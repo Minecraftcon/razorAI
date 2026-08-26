@@ -1,46 +1,110 @@
 ---
 name: chrome-devtools
-description: Uses Chrome DevTools via MCP for efficient debugging, troubleshooting and browser automation. Use when debugging web pages, automating browser interactions, analyzing performance, or inspecting network requests. This skill does not apply to `--slim` mode (MCP configuration).
+description: Direct Chrome DevTools Protocol (CDP) browser automation, live JavaScript inspection, DOM analysis, and script injection for web apps and games. Use when inspecting browser pages, evaluating JS, automating tabs, injecting mods/ESP/scripts, or debugging network state.
 ---
 
-## Core Concepts
+# Chrome DevTools & Browser Automation Guide
 
-**Browser lifecycle**: Browser starts automatically on first tool call using a persistent Chrome profile. Configure via CLI args in the MCP server configuration: `npx chrome-devtools-mcp@latest --help`.
+This skill provides step-by-step instructions and a CLI helper script to automate Chrome/Chromium, inspect live JavaScript objects, evaluate expressions, and inject scripts via the Chrome DevTools Protocol (CDP).
 
-**Page selection**: Tools operate on the currently selected page. Use `list_pages` to see available pages, then `select_page` to switch context.
+---
 
-**Element interaction**: Use `take_snapshot` to get page structure with element `uid`s. Each element has a unique `uid` for interaction. If an element isn't found, take a fresh snapshot - the element may have been removed or the page changed.
+## 1. Launching Chrome/Chromium with Remote Debugging
 
-## Workflow Patterns
+To allow DevTools control, ensure Chromium or Chrome is running with `--remote-debugging-port=9222`:
 
-### Before interacting with a page
+```bash
+# Launch Chromium in background
+/bin/chromium --remote-debugging-port=9222 --no-first-run --no-default-browser-check &
+```
+*(Or use `google-chrome` if installed).*
 
-1. Navigate: `navigate_page` or `new_page`
-2. Wait: `wait_for` to ensure content is loaded if you know what you look for.
-3. Snapshot: `take_snapshot` to understand page structure
-4. Interact: Use element `uid`s from snapshot for `click`, `fill`, etc.
+---
 
-### Efficient data retrieval
+## 2. Using the Bundled CDP Helper (`cdp_tool.py`)
 
-- Use `filePath` parameter for large outputs (screenshots, snapshots, traces)
-- Use pagination (`pageIdx`, `pageSize`) and filtering (`types`) to minimize data
-- Set `includeSnapshot: false` on input actions unless you need updated page state
+The skill includes a standalone CLI helper located at:
+`assets/plugins/chrome-devtools-plugin/skills/chrome-devtools/scripts/cdp_tool.py`
 
-### Tool selection
+### **A. List Open Tabs & Pages**
+```bash
+python3 assets/plugins/chrome-devtools-plugin/skills/chrome-devtools/scripts/cdp_tool.py list
+```
 
-- **Automation/interaction**: `take_snapshot` (text-based, faster, better for automation)
-- **Visual inspection**: `take_screenshot` (when user needs to see visual state)
-- **Additional details**: `evaluate_script` for data not in accessibility tree
+### **B. Open a New Tab / Navigate**
+```bash
+# Open a new tab
+python3 assets/plugins/chrome-devtools-plugin/skills/chrome-devtools/scripts/cdp_tool.py new "https://venge.io"
 
-### Parallel execution
+# Or navigate the active tab
+python3 assets/plugins/chrome-devtools-plugin/skills/chrome-devtools/scripts/cdp_tool.py navigate "https://example.com"
+```
 
-You can send multiple tool calls in parallel, but maintain correct order: navigate → wait → snapshot → interact.
+### **C. Evaluate Live JavaScript (`eval`)**
+```bash
+# Inspect global window objects / game engine
+python3 assets/plugins/chrome-devtools-plugin/skills/chrome-devtools/scripts/cdp_tool.py eval "Object.keys(window)"
 
-## Troubleshooting
+# Inspect PlayCanvas or Game variables
+python3 assets/plugins/chrome-devtools-plugin/skills/chrome-devtools/scripts/cdp_tool.py eval "window.pc ? Object.keys(window.pc) : 'No PlayCanvas'"
 
-If `chrome-devtools-mcp` is insufficient, guide users to use Chrome DevTools UI:
+# Get document title and URL
+python3 assets/plugins/chrome-devtools-plugin/skills/chrome-devtools/scripts/cdp_tool.py eval "({title: document.title, url: window.location.href})"
+```
 
-- https://developer.chrome.com/docs/devtools
-- https://developer.chrome.com/docs/devtools/ai-assistance
+### **D. Inject a Custom Script / Mod (`inject`)**
+Write your script to a `.js` file, then inject it directly into the active browser page:
 
-If there are errors launching `chrome-devtools-mcp` or Chrome, refer to https://github.com/ChromeDevTools/chrome-devtools-mcp/blob/main/docs/troubleshooting.md.
+```bash
+# Write your custom JS logic
+# Example: Injecting ESP, hooks, or event listeners
+python3 assets/plugins/chrome-devtools-plugin/skills/chrome-devtools/scripts/cdp_tool.py inject /path/to/script.js
+```
+
+---
+
+## 3. Writing Custom Python Automation Scripts
+
+If you need continuous automation, websockets, or event listeners, create a dedicated script in your session scratch directory:
+
+```python
+import asyncio
+import json
+import urllib.request
+import websockets
+
+async def main():
+    # 1. Get targets from HTTP endpoint
+    targets = json.loads(urllib.request.urlopen("http://127.0.0.1:9222/json").read())
+    page = next(t for t in targets if t.get("type") == "page")
+    ws_url = page["webSocketDebuggerUrl"]
+
+    # 2. Connect via WebSocket
+    async with websockets.connect(ws_url) as ws:
+        # Evaluate JavaScript
+        cmd = {
+            "id": 1,
+            "method": "Runtime.evaluate",
+            "params": {
+                "expression": "console.log('Razor connected!'); document.body.style.border = '4px solid red';",
+                "returnByValue": True
+            }
+        }
+        await ws.send(json.dumps(cmd))
+        resp = await ws.recv()
+        print("CDP Result:", resp)
+
+asyncio.run(main())
+```
+
+---
+
+## 4. Troubleshooting & Rules
+- **DO NOT** use `curl -X POST http://localhost:9222/devtools/page/<id>`. Target endpoints are WebSockets (`ws://`), not HTTP POST.
+- **HTTP Endpoints Supported**:
+  - `GET http://localhost:9222/json` (List tabs)
+  - `GET http://localhost:9222/json/version` (Browser version & browser WebSocket)
+  - `PUT http://localhost:9222/json/new?<url>` (Create tab)
+  - `GET http://localhost:9222/json/activate/<id>` (Activate tab)
+  - `GET http://localhost:9222/json/close/<id>` (Close tab)
+- **Always write scripts directly using `write_file` and execute them with `run_command`.**

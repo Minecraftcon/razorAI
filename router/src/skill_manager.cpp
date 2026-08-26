@@ -60,15 +60,16 @@ std::vector<SkillInfo> SkillManager::DiscoverSkills(bool force_refresh) {
     cached_skills_.clear();
     std::vector<std::string> search_roots;
 
-    const char* home = std::getenv("HOME");
-    if (home) {
-        search_roots.push_back(std::string(home) + "/.gemini/config/skills");
-        search_roots.push_back(std::string(home) + "/.gemini/config/plugins");
-        search_roots.push_back(std::string(home) + "/.gemini/antigravity-ide/builtin/skills");
-    }
-    search_roots.push_back(".agents/skills");
+    // Razor standalone packaged assets (primary self-contained skill catalog)
     search_roots.push_back("assets/skills");
     search_roots.push_back("assets/plugins");
+    search_roots.push_back(".agents/skills");
+
+    const char* home = std::getenv("HOME");
+    if (home) {
+        search_roots.push_back(std::string(home) + "/.razor/skills");
+        search_roots.push_back(std::string(home) + "/.razor/plugins");
+    }
 
     for (const auto& root_str : search_roots) {
         fs::path root_path(root_str);
