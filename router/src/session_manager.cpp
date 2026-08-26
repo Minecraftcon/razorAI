@@ -150,87 +150,89 @@ std::vector<nlohmann::json> SessionManager::GetHistory(const std::string& sessio
         if (line.empty()) continue;
         try {
             nlohmann::json j = nlohmann::json::parse(line);
-            if (j.contains("user_prompt")) {
-                std::string up = j["user_prompt"].get<std::string>();
-                bool is_tool_res = false;
-                try {
-                    nlohmann::json upj = nlohmann::json::parse(up);
-                    if (upj.is_array() && !upj.empty()) {
-                        if (upj[0].contains("tool_result") && upj[0]["tool_result"].is_boolean() && upj[0]["tool_result"].get<bool>()) {
-                            is_tool_res = true;
-                            for (const auto& tr : upj) {
-                                nlohmann::json msg;
-                                msg["role"] = "tool";
-                                if (tr.contains("tool_call_id")) msg["tool_call_id"] = tr["tool_call_id"];
-                                if (tr.contains("name")) msg["name"] = tr["name"];
-                                if (tr.contains("prompt")) {
-                                    std::string p_str = tr["prompt"].get<std::string>();
-                                    msg["content"] = p_str.empty() ? "(Tool executed successfully with no output)" : p_str;
-                                } else {
-                                    msg["content"] = "(Tool executed successfully with no output)";
-                                }
-                                history.push_back(msg);
-                            }
-                        }
-                    } else if (upj.is_object()) {
-                        if (upj.contains("tool_result") && upj["tool_result"].is_boolean() && upj["tool_result"].get<bool>()) {
-                            is_tool_res = true;
-                            nlohmann::json msg;
-                            msg["role"] = "tool";
-                            if (upj.contains("tool_call_id")) msg["tool_call_id"] = upj["tool_call_id"];
-                            if (upj.contains("name")) msg["name"] = upj["name"];
-                            if (upj.contains("prompt")) {
-                                std::string p_str = upj["prompt"].get<std::string>();
-                                msg["content"] = p_str.empty() ? "(Tool executed successfully with no output)" : p_str;
-                            } else {
-                                msg["content"] = "(Tool executed successfully with no output)";
-                            }
-                            history.push_back(msg);
-                        }
+            if (!j.contains("response") || !j.contains("user_prompt")) continue;
+
+            std::string resp = j["response"].get<std::string>();
+            // If the turn ended in an API failure or corrupt raw tool name, skip this entire broken turn so history stays clean!
+            if (resp.empty() || resp.find("[Router Output]") != std::string::npos ||
+                resp == "run_command" || resp == "write_file" || resp == "read_file" ||
+                resp == "list_dir" || resp == "manage_task" || resp == "replace_file_content" || resp == "web_search") {
+                continue;
+            }
+
+            // Build assistant message from response
+            bool is_tc = false;
+            nlohmann::json assistant_msg;
+            try {
+                nlohmann::json rj = nlohmann::json::parse(resp);
+                if (rj.is_array() && !rj.empty() && rj[0].contains("tool")) {
+                    is_tc = true;
+                    assistant_msg["role"] = "assistant";
+                    assistant_msg["content"] = "";
+                    assistant_msg["tool_calls"] = nlohmann::json::array();
+                    for (auto& tc : rj) {
+                        nlohmann::json t;
+                        t["id"] = tc.value("tool_call_id", "");
+                        t["type"] = "function";
+                        t["function"]["name"] = tc.value("tool", "");
+                        t["function"]["arguments"] = tc.contains("args") ? tc["args"].dump() : "{}";
+                        assistant_msg["tool_calls"].push_back(t);
                     }
-                } catch (...) {}
-                
-                if (!is_tool_res) {
+                }
+            } catch (...) {}
+
+            if (!is_tc) {
+                assistant_msg["role"] = "assistant";
+                assistant_msg["content"] = resp;
+            }
+
+            // Build user / tool message from user_prompt
+            std::string up = j["user_prompt"].get<std::string>();
+            std::vector<nlohmann::json> prompt_msgs;
+            try {
+                nlohmann::json upj = nlohmann::json::parse(up);
+                if (upj.is_array() && !upj.empty() && upj[0].contains("tool_result") && upj[0]["tool_result"].get<bool>()) {
+                    for (const auto& tr : upj) {
+                        nlohmann::json msg;
+                        msg["role"] = "tool";
+                        if (tr.contains("tool_call_id")) msg["tool_call_id"] = tr["tool_call_id"];
+                        if (tr.contains("name")) msg["name"] = tr["name"];
+                        if (tr.contains("prompt")) {
+                            std::string p_str = tr["prompt"].get<std::string>();
+                            msg["content"] = p_str.empty() ? "(Tool executed successfully with no output)" : p_str;
+                        } else {
+                            msg["content"] = "(Tool executed successfully with no output)";
+                        }
+                        prompt_msgs.push_back(msg);
+                    }
+                } else if (upj.is_object() && upj.contains("tool_result") && upj["tool_result"].get<bool>()) {
                     nlohmann::json msg;
-                    msg["role"] = "user";
-                    msg["content"] = up;
-                    history.push_back(msg);
-                }
-            }
-            
-            if (j.contains("response")) {
-                std::string resp = j["response"].get<std::string>();
-                bool is_tc = false;
-                try {
-                    nlohmann::json rj = nlohmann::json::parse(resp);
-                    if (rj.is_array() && !rj.empty() && rj[0].contains("tool")) {
-                        is_tc = true;
-                        nlohmann::json msg;
-                        msg["role"] = "assistant";
-                        msg["content"] = "";
-                        msg["tool_calls"] = nlohmann::json::array();
-                        for (auto& tc : rj) {
-                            nlohmann::json t;
-                            t["id"] = tc["tool_call_id"];
-                            t["type"] = "function";
-                            t["function"]["name"] = tc["tool"];
-                            t["function"]["arguments"] = tc["args"].dump();
-                            msg["tool_calls"].push_back(t);
-                        }
-                        history.push_back(msg);
+                    msg["role"] = "tool";
+                    if (upj.contains("tool_call_id")) msg["tool_call_id"] = upj["tool_call_id"];
+                    if (upj.contains("name")) msg["name"] = upj["name"];
+                    if (upj.contains("prompt")) {
+                        std::string p_str = upj["prompt"].get<std::string>();
+                        msg["content"] = p_str.empty() ? "(Tool executed successfully with no output)" : p_str;
+                    } else {
+                        msg["content"] = "(Tool executed successfully with no output)";
                     }
-                } catch (...) {}
-                
-                if (!is_tc && !resp.empty() && resp.find("[Router Output]") == std::string::npos) {
-                    // Skip corrupt raw tool names like "run_command" that were generated due to empty tool results
-                    if (resp != "run_command" && resp != "write_file" && resp != "read_file" && resp != "list_dir" && resp != "manage_task" && resp != "replace_file_content") {
-                        nlohmann::json msg;
-                        msg["role"] = "assistant";
-                        msg["content"] = resp;
-                        history.push_back(msg);
-                    }
+                    prompt_msgs.push_back(msg);
                 }
+            } catch (...) {}
+
+            if (prompt_msgs.empty()) {
+                nlohmann::json msg;
+                msg["role"] = "user";
+                msg["content"] = up;
+                prompt_msgs.push_back(msg);
             }
+
+            // Push prompt msgs, then assistant msg
+            for (auto& pm : prompt_msgs) {
+                history.push_back(pm);
+            }
+            history.push_back(assistant_msg);
+
         } catch (...) {}
     }
     return history;
