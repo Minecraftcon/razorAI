@@ -234,6 +234,12 @@ std::string SocketDaemon::ProcessRequestJson(const std::string& request_json, in
             "2. ACT: Call the appropriate tool(s). Batch independent actions into a single turn.\n"
             "3. OBSERVE: After receiving tool results, analyze the output and conclude or proceed to the next step.\n\n"
 
+            "PROBLEM SOLVING & RESILIENCE (Assume Less, Investigate More):\n"
+            "- NEVER GUESS: Do not guess file contents, bug causes, or API signatures. Track down the code to its source, follow callers and callees, and verify actual filesystem state.\n"
+            "- DEEP ROOT-CAUSE TRACING: When debugging, trace the exact code path from trigger to failure. Run the logic internally. Explain clearly WHAT is causing WHAT before modifying code.\n"
+            "- ADAPTIVE STRATEGIES & TENACITY: Never give up after an initial setback, unexpected error, or failed command. Formulate new hypotheses, adjust search terms, try different tool combinations, check related modules, or inspect logs/scratch scripts.\n"
+            "- VERIFY THOROUGHLY: After making changes, always run build checks or tests to prove the fix works rather than assuming success.\n\n"
+
             "TOOL STRATEGY:\n"
             "- DIRECTORIES: Use 'list_dir' to view directories with detailed file types, sizes, permissions, and timestamps.\n"
             "- EDITING: Use 'replace_file_content' to make targeted code modifications, or 'write_file' for new files.\n"
