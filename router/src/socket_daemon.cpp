@@ -488,52 +488,10 @@ std::string SocketDaemon::ProcessRequestJson(const std::string& request_json, in
         std::string payload_str = payload.dump();
         LogMessage("INFO", "Payload Sent to API: " + payload_str);
         
-        long timeout = 20; // 20s for primary
-        std::string api_response;
-        
-        bool has_secondary = (model_config_.models.size() > 1);
-        
-        while (true) {
-            api_response = HttpClient::Post(endpoint, api_key, payload_str, timeout);
-            
-            if (!api_response.empty()) {
-                break; // Success!
-            }
-            
-            // Timeout occurred
-            if (model_index == 0 && has_secondary) {
-                LogMessage("INFO", "API call timed out for primary model. Falling back to secondary...");
-                if (client_fd >= 0) {
-                    std::string fb_name = model_config_.models[1].name;
-                    std::string status_msg = "{\"status\":\"handover\", \"model\":\"" + fb_name + "\"}\n";
-                    write(client_fd, status_msg.c_str(), status_msg.size());
-                }
-                
-                // Try fallback
-                const ModelEntry* fallback = &model_config_.models[1];
-                endpoint = fallback->endpoint;
-                api_key = fallback->api_key;
-                model_id = fallback->model;
-                model_name = fallback->name;
-                
-                payload["model"] = model_id;
-                payload_str = payload.dump();
-                
-                api_response = HttpClient::Post(endpoint, api_key, payload_str, 0); // Indefinite for fallback
-                break;
-            } else {
-                // No secondary model, or we are already the secondary model. Retry indefinitely!
-                LogMessage("INFO", "API call timed out. No fallback available. Retrying primary model...");
-                if (client_fd >= 0) {
-                    std::string status_msg = "{\"status\":\"handover\", \"model\":\"" + model_name + " (Retrying)\"}\n";
-                    write(client_fd, status_msg.c_str(), status_msg.size());
-                }
-                // Continue loop to retry
-            }
-        }
+        std::string api_response = HttpClient::Post(endpoint, api_key, payload_str, 60);
         
         if (api_response.empty()) {
-            response_text = "[Router Output] API call failed.";
+            response_text = "[Router Output] API call failed: No response received from " + model_name + " endpoint (" + endpoint + "). Please verify your network and API key.";
         } else {
             try {
                 json resp_json = json::parse(api_response);

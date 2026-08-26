@@ -1081,19 +1081,6 @@ void RazorUI::Run() {
             if (event == Event::Return && is_paste) {
                 return false; // Let base_input_component insert a newline
             }
-            
-            auto current_matches = get_autocomplete_state();
-            if (!current_matches.empty() && selected_command_index_.load() < (int)current_matches.size()) {
-                if (prompt_value_.find(' ') == std::string::npos && prompt_value_ != "/" && prompt_value_.size() > 1) {
-                    std::string matched_cmd = current_matches[selected_command_index_.load()];
-                    if (matched_cmd == "clear" || matched_cmd == "help" || matched_cmd == "tasks" || matched_cmd == "session") {
-                        prompt_value_ = "/" + matched_cmd;
-                    } else {
-                        prompt_value_ = "/" + matched_cmd + " ";
-                        return true;
-                    }
-                }
-            }
 
             if (event == Event::Character(' ')) {
                 return false; // Let base_input_component handle normal space
@@ -1133,13 +1120,23 @@ void RazorUI::Run() {
                         return true;
                     }
 
+                    if (cmd == "models" || cmd == "model") {
+                        if (arg.empty()) {
+                            model_menu_selected_ = selected_model_idx_.load();
+                            show_model_picker_ = true;
+                            last_keypress_ = std::chrono::steady_clock::now();
+                            return true;
+                        }
+                    }
+
                     std::string local_response = "";
                     if (cmd == "help") {
                         local_response = 
                             "### Razor Slash Commands\n\n"
                             "| Command | Description |\n"
                             "| :--- | :--- |\n"
-                            "| `/models`, `/model [name|idx]` | List available models or switch active model |\n"
+                            "| `/models`, `/model` | Open interactive model switcher (arrow keys + Enter) |\n"
+                            "| `/model [name|idx]` | Switch directly to model by name or index |\n"
                             "| `/roles`, `/role [name]` | List available agent roles or inspect role |\n"
                             "| `/skills [filter]` | Discover and list global and workspace skills |\n"
                             "| `/skill <name>` | View detailed instructions for a specific skill |\n"
@@ -1148,42 +1145,27 @@ void RazorUI::Run() {
                             "| `/clear` | Clear terminal chat history |\n"
                             "| `/help` | Show this command cheat-sheet |\n";
                     } else if (cmd == "models" || cmd == "model") {
-                        if (arg.empty()) {
-                            std::ostringstream ss;
-                            ss << "### Configured Models (" << available_models_.size() << " available)\n\n";
-                            int active_idx = selected_model_idx_.load();
-                            for (size_t i = 0; i < available_models_.size(); ++i) {
-                                ss << " " << (i + 1) << ". **" << available_models_[i] << "**";
-                                if ((int)i == active_idx) {
-                                    ss << " `[ACTIVE]`";
-                                }
-                                ss << "\n";
-                            }
-                            ss << "\n*Switch active model by typing `/model <number>` or `/model <name>`.*";
-                            local_response = ss.str();
-                        } else {
-                            int idx = -1;
-                            try {
-                                idx = std::stoi(arg) - 1;
-                            } catch (...) {}
+                        int idx = -1;
+                        try {
+                            idx = std::stoi(arg) - 1;
+                        } catch (...) {}
 
-                            if (idx >= 0 && idx < (int)available_models_.size()) {
-                                selected_model_idx_ = idx;
-                                local_response = "Switched active model to: **" + available_models_[idx] + "**";
+                        if (idx >= 0 && idx < (int)available_models_.size()) {
+                            selected_model_idx_ = idx;
+                            local_response = "Switched active model to: **" + available_models_[idx] + "**";
+                        } else {
+                            auto it = std::find_if(available_models_.begin(), available_models_.end(), [&](const std::string& m) {
+                                std::string m_lower = m;
+                                std::string arg_lower = arg;
+                                std::transform(m_lower.begin(), m_lower.end(), m_lower.begin(), ::tolower);
+                                std::transform(arg_lower.begin(), arg_lower.end(), arg_lower.begin(), ::tolower);
+                                return m_lower.find(arg_lower) != std::string::npos;
+                            });
+                            if (it != available_models_.end()) {
+                                selected_model_idx_ = std::distance(available_models_.begin(), it);
+                                local_response = "Switched active model to: **" + *it + "**";
                             } else {
-                                auto it = std::find_if(available_models_.begin(), available_models_.end(), [&](const std::string& m) {
-                                    std::string m_lower = m;
-                                    std::string arg_lower = arg;
-                                    std::transform(m_lower.begin(), m_lower.end(), m_lower.begin(), ::tolower);
-                                    std::transform(arg_lower.begin(), arg_lower.end(), arg_lower.begin(), ::tolower);
-                                    return m_lower.find(arg_lower) != std::string::npos;
-                                });
-                                if (it != available_models_.end()) {
-                                    selected_model_idx_ = std::distance(available_models_.begin(), it);
-                                    local_response = "Switched active model to: **" + *it + "**";
-                                } else {
-                                    local_response = "Error: Model '" + arg + "' not found in configuration.";
-                                }
+                                local_response = "Error: Model '" + arg + "' not found in configuration.";
                             }
                         }
                     } else if (cmd == "roles" || cmd == "role") {
@@ -1571,13 +1553,80 @@ void RazorUI::Run() {
         );
         
         if (show_model_picker_.load()) {
-            Element picker_view = window(text(" Switch Model "), model_picker->Render()) | clear_under | center;
+            Elements model_items;
+            for (size_t i = 0; i < available_models_.size(); ++i) {
+                bool is_highlighted = ((int)i == model_menu_selected_);
+                bool is_active = ((int)i == selected_model_idx_.load());
+                
+                std::string prefix = is_highlighted ? "  > " : "    ";
+                std::string label = prefix + std::to_string(i + 1) + ". " + available_models_[i];
+                if (is_active) {
+                    label += "  [ACTIVE]";
+                }
+                
+                Element item = text(label);
+                if (is_highlighted) {
+                    item = item | bold | color(Color::Black) | bgcolor(Color::Yellow);
+                } else if (is_active) {
+                    item = item | bold | color(Color::GreenLight);
+                } else {
+                    item = item | color(Color::White);
+                }
+                model_items.push_back(item);
+            }
+
+            Element picker_box = vbox({
+                text(" SELECT ACTIVE MODEL ") | bold | color(Color::Black) | bgcolor(Color::Yellow) | center,
+                separatorLight() | color(Color::GrayDark),
+                vbox(std::move(model_items)),
+                separatorLight() | color(Color::GrayDark),
+                text("Up/Down to navigate  •  Enter to select  •  Esc to cancel") | color(Color::GrayLight) | center
+            }) | borderRounded | bgcolor(Color::RGB(18, 18, 18)) | size(WIDTH, GREATER_THAN, 64);
+
+            Element picker_view = picker_box | clear_under | center;
             return dbox({main_view, picker_view});
         }
         return main_view;
     });
 
     auto main_component = CatchEvent(renderer, [&](Event event) {
+        if (show_model_picker_.load()) {
+            if (event == Event::Escape || event == Event::Character('q') || event == Event::Character('Q')) {
+                show_model_picker_ = false;
+                last_keypress_ = std::chrono::steady_clock::now();
+                return true;
+            }
+            if (event == Event::ArrowUp) {
+                model_menu_selected_ = std::max(0, model_menu_selected_ - 1);
+                last_keypress_ = std::chrono::steady_clock::now();
+                return true;
+            }
+            if (event == Event::ArrowDown) {
+                model_menu_selected_ = std::min((int)available_models_.size() - 1, model_menu_selected_ + 1);
+                last_keypress_ = std::chrono::steady_clock::now();
+                return true;
+            }
+            if (event == Event::Return) {
+                selected_model_idx_ = model_menu_selected_;
+                show_model_picker_ = false;
+                std::string chosen_model = (selected_model_idx_.load() < (int)available_models_.size()) 
+                    ? available_models_[selected_model_idx_.load()] : "Default";
+                {
+                    std::lock_guard<std::mutex> lock(history_mutex_);
+                    ChatMessage msg;
+                    msg.prompt = "/model " + chosen_model;
+                    msg.response = "Switched active model to: **" + chosen_model + "**";
+                    msg.model_name = "Razor System";
+                    msg.is_loading = false;
+                    msg.streamed_length = msg.response.size();
+                    history_.push_back(msg);
+                }
+                last_keypress_ = std::chrono::steady_clock::now();
+                return true;
+            }
+            return true;
+        }
+
         if (event == Event::Character('\x13') || event == Event::Special("\x13")) {
             std::string to_steer = "";
             {
