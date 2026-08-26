@@ -223,6 +223,12 @@ std::string SocketDaemon::ProcessRequestJson(const std::string& request_json, in
             "You are Razor, an intelligent pair-programming engineer working inside an interactive terminal environment. "
             "You have access to tools for listing directories, inspecting files, editing code, running shell commands, and managing tasks.\n\n"
 
+            "SESSION & SCRATCH DIRECTORY:\n"
+            "- Active Session ID: " + s_info.session_id + "\n"
+            "- Session Scratch Path: " + s_info.scratch_dir + "\n"
+            "- Purpose: Use this scratch directory for temporary scratch scripts (e.g. one-off Python or shell test scripts), "
+            "intermediate calculation dumps, and debug data to avoid polluting the user's workspace repository.\n\n"
+
             "EXECUTION MODEL (Reason → Act → Observe):\n"
             "1. REASON: Before taking any action, briefly explain WHAT you need to do and WHY.\n"
             "2. ACT: Call the appropriate tool(s). Batch independent actions into a single turn.\n"
