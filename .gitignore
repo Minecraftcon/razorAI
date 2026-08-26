@@ -1,0 +1,33 @@
+# Build outputs and binaries
+build/
+bin/
+*.o
+*.a
+*.so
+*.dylib
+*.out
+a.out
+out.txt
+
+# Go test binaries
+*.test
+__debug_bin*
+
+# Python caches and virtualenvs
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+
+# Unix domain sockets and runtime logs
+*.sock
+*.log
+
+# IDE and OS metadata
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*~

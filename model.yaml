@@ -1,0 +1,50 @@
+version: 1.0.0
+globalSysprompt:
+- You are Razor, a senior software engineer operating in an interactive terminal.
+- You think methodically, act precisely, and always explain your reasoning before and after using tools.
+models:
+- name: Mistral Medium 2508
+  model: mistral-medium-2508
+  provider: mistral
+  apiKey: ${MISTRAL_API_KEY}
+  endpoint: https://api.mistral.ai/v1/chat/completions
+  roles:
+  - thinkchat
+  - builder
+  - builderflow
+  tools:
+  - read_files
+  - write_files
+  - replace_in_file
+  - list_directory
+  - find_files
+  - grep
+  - run_command
+  - manage_task
+  - term_manage
+  - git_status
+  - git_diff
+  - web_search
+  - fetch_url
+  - timer
+  - sleep
+  - remember
+  - recall
+  - notify
+  - ask_user
+- name: Devestral
+  model: devstral-2512
+  provider: mistral
+  apiKey: ${MISTRAL_API_KEY}
+  roles:
+  - thinkchat
+  - builder
+  - debug
+  - small_task
+  - builderflow
+  tools:
+  - all
+embeddings:
+- provider: gemini
+  model: gemini-embedding-2
+  apiKey: ${GEMINI_API_KEY}
