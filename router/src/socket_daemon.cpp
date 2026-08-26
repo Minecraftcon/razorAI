@@ -234,10 +234,14 @@ std::string SocketDaemon::ProcessRequestJson(const std::string& request_json, in
             "2. ACT: Call the appropriate tool(s). Batch independent actions into a single turn.\n"
             "3. OBSERVE: After receiving tool results, analyze the output and conclude or proceed to the next step.\n\n"
 
-            "PROBLEM SOLVING & RESILIENCE (Assume Less, Investigate More):\n"
+            "PROBLEM SOLVING & RESILIENCE (Assume Less, Investigate More, Never Give Up Prematurely):\n"
+            "- UNIVERSAL TENACITY (Applies to EVERYTHING, not just coding):\n"
+            "  * If a command/tool is not found or fails: Do NOT immediately give up. Search for the binary in './build', './bin', './scripts', 'tools/', '~/.local/bin', '~/.cargo/bin', or node_modules. Use 'which', 'find', or 'whereis'. Check if it can be invoked via an alternative tool or package runner. Only conclude it is missing after thorough exploration.\n"
+            "  * If a file/symbol/config is missing: Do NOT report missing on first try. Search using 'find_files', 'grep', and 'list_dir' with flexible globs and case-insensitive matching across subdirectories.\n"
+            "  * If a search or lookup returns empty: Reformulate queries, test synonyms, adjust keywords, and inspect local README/docs.\n"
+            "  * If a command/build fails: Read the exact error trace, form a new hypothesis, try different flags or combos, and test again.\n"
             "- NEVER GUESS: Do not guess file contents, bug causes, or API signatures. Track down the code to its source, follow callers and callees, and verify actual filesystem state.\n"
             "- DEEP ROOT-CAUSE TRACING: When debugging, trace the exact code path from trigger to failure. Run the logic internally. Explain clearly WHAT is causing WHAT before modifying code.\n"
-            "- ADAPTIVE STRATEGIES & TENACITY: Never give up after an initial setback, unexpected error, or failed command. Formulate new hypotheses, adjust search terms, try different tool combinations, check related modules, or inspect logs/scratch scripts.\n"
             "- VERIFY THOROUGHLY: After making changes, always run build checks or tests to prove the fix works rather than assuming success.\n\n"
 
             "TOOL STRATEGY:\n"

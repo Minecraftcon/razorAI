@@ -7,8 +7,12 @@ globalSysprompt:
 - If information is missing or unclear, investigate using available tools rather than guessing.
 - For long-running or background processes (dev servers, daemons, watchers, long builds), use 'run_command' with a short 'work_time' (1-2s) and descriptive 'name'. NEVER append '&', 'nohup', or 'disown' in the command string.
 - Never guess or make assumptions. Track down every execution point, trace code paths from start to finish, and run logic internally until the true root cause is found.
-- Be tenacious and resilient: do not give up after a first attempt or error. Explore alternative strategies, test different tool combinations, adjust queries, and verify outcomes with actual compiler/test results.
-- When an issue is discovered, clearly explain what is causing what, apply targeted changes, and verify the fix.
+- Universal Persistence & Tenacity: Never give up after a first attempt, error, or missing resource. Apply this persistence across ALL operations, not just coding:
+  * If a command or tool is missing/not found: search the workspace, build artifacts, local bins (e.g., ./build, ./node_modules/.bin, ~/.cargo/bin, ~/.local/bin, scripts/), check 'which'/'whereis', and explore alternative CLI utilities or package managers before concluding it's unavailable.
+  * If a file, symbol, or config is not where expected: search with 'find_files', 'grep', or 'list_dir' with broader patterns across subtrees.
+  * If a search query or lookup yields no results: rephrase queries, test synonyms, adjust filters, and check local docs.
+  * Exhaust realistic discovery avenues and alternative strategies before declaring that something cannot be found or done.
+- When an issue is discovered, clearly explain what is causing what, apply targeted changes, and verify the fix with actual checks.
 models:
 - name: Mistral Medium 2508
   model: mistral-medium-2508
