@@ -181,14 +181,6 @@ std::string SocketDaemon::ProcessRequestJson(const std::string& request_json, in
         route_res.cache_hit = false; // Never use semantic cache on tool results!
     }
 
-    std::string assigned_role = requested_role;
-    if (assigned_role.empty()) {
-        if (route_res.category == "Question/Chat") assigned_role = "thinkchat";
-        else if (route_res.category == "Small_Task") assigned_role = "small_task";
-        else if (route_res.category == "Build") assigned_role = "Builder";
-        else assigned_role = "thinkchat";
-    }
-
     std::string model_name, model_id, provider, api_key, endpoint;
     bool api_key_set = false;
     std::vector<std::string> sys_prompts;
@@ -205,10 +197,10 @@ std::string SocketDaemon::ProcessRequestJson(const std::string& request_json, in
 
     {
         std::shared_lock<std::shared_mutex> lock(config_mutex_);
-        const ModelEntry* selected_model = model_config_.GetModelForRole(assigned_role);
-        if (model_index > 0 && model_index < model_config_.models.size()) {
+        const ModelEntry* selected_model = nullptr;
+        if (model_index >= 0 && model_index < (int)model_config_.models.size()) {
             selected_model = &model_config_.models[model_index];
-        } else if (!selected_model && !model_config_.models.empty()) {
+        } else if (!model_config_.models.empty()) {
             selected_model = &model_config_.models[0];
         }
 
@@ -226,48 +218,26 @@ std::string SocketDaemon::ProcessRequestJson(const std::string& request_json, in
         
         sys_prompts = model_config_.global_sysprompt;
         
+        sys_prompts.push_back(
+            "IDENTITY & WORKFLOW:\n"
+            "You are Razor, an intelligent pair-programming engineer working inside an interactive terminal environment. "
+            "You have access to tools for listing directories, inspecting files, editing code, running shell commands, and managing tasks.\n\n"
+
+            "EXECUTION MODEL (Reason → Act → Observe):\n"
+            "1. REASON: Before taking any action, briefly explain WHAT you need to do and WHY.\n"
+            "2. ACT: Call the appropriate tool(s). Batch independent actions into a single turn.\n"
+            "3. OBSERVE: After receiving tool results, analyze the output and conclude or proceed to the next step.\n\n"
+
+            "TOOL STRATEGY:\n"
+            "- DIRECTORIES: Use 'list_dir' to view directories with detailed file types, sizes, permissions, and timestamps.\n"
+            "- EDITING: Use 'replace_file_content' to make targeted code modifications, or 'write_file' for new files.\n"
+            "- COMMANDS: When running commands with 'run_command', provide a short descriptive 'name'. Set 'work_time' for background processes.\n"
+            "- BACKGROUND TASKS: Use 'manage_task' with action='view', 'send_keycode', or 'kill' to monitor or terminate jobs.\n"
+        );
+
         std::vector<std::string> combined_tools;
         if (selected_model) {
             combined_tools = selected_model->tools;
-        }
-
-        auto role_it = model_config_.roles.find(assigned_role);
-        if (role_it != model_config_.roles.end()) {
-            const RoleConfig& rc = role_it->second;
-            sys_prompts.insert(sys_prompts.end(), rc.sys_prompt.begin(), rc.sys_prompt.end());
-            
-            // Core identity and execution loop
-            sys_prompts.push_back(
-                "IDENTITY:\n"
-                "You are a senior software engineer working inside an interactive terminal environment. "
-                "You have access to a set of tools for listing directories, reading files, writing files, searching code, running shell commands, and managing background tasks. "
-                "You operate autonomously to fulfill the user's request. Be precise, efficient, and methodical.\n\n"
-
-                "EXECUTION MODEL (Reason → Act → Observe):\n"
-                "Follow this loop for every task:\n"
-                "1. REASON: Before taking any action, briefly explain WHAT you need to do and WHY. Identify what information you're missing.\n"
-                "2. ACT: Call the appropriate tool(s). If multiple independent actions are needed, batch them into a single turn. If actions depend on each other, chain them sequentially across turns.\n"
-                "3. OBSERVE: After receiving tool results, analyze the output. Decide if the task is complete or if further action is needed. If further action is needed, return to step 1.\n\n"
-
-                "TOOL STRATEGY:\n"
-                "- INSPECT DIRECTORIES: Use 'list_dir' to view directories with detailed file types (like the 'file' command), sizes, permissions, and timestamps.\n"
-                "- BATCH independent calls: If you need to read 3 files, read them all in one turn.\n"
-                "- CHAIN dependent calls: If you need to read a file to know what to write, read first, then write in the next turn.\n"
-                "- NAME your tasks: When running commands with 'run_command', always provide a short descriptive 'name' (e.g. 'build_check', 'dev_server', 'test_suite').\n"
-                "- BACKGROUND long processes: For servers, watchers, or long builds, set a short 'work_time' (1-2s) so execution continues in the background while you proceed with other work.\n"
-                "- MANAGE background tasks: Use 'manage_task' with action='view' to check status/logs, 'send_keycode' to send stdin input, and 'kill' to terminate.\n\n"
-
-                "RESPONSE STYLE:\n"
-                "- Be direct and concise. No filler phrases.\n"
-                "- When explaining changes, describe the WHY, not just the WHAT.\n"
-                "- You may use ANSI escape sequences for colored terminal output when helpful."
-            );    
-            
-            for (const auto& t : rc.tools) {
-                if (std::find(combined_tools.begin(), combined_tools.end(), t) == combined_tools.end()) {
-                    combined_tools.push_back(t);
-                }
-            }
         }
 
         if (!combined_tools.empty()) {
@@ -413,7 +383,7 @@ std::string SocketDaemon::ProcessRequestJson(const std::string& request_json, in
         } catch (...) {}
     }
 
-    LogMessage("INFO", "Routing request to model: " + model_name + " (role: " + assigned_role + ") for session: " + s_info.session_id);
+    LogMessage("INFO", "Routing request to model: " + model_name + " for session: " + s_info.session_id);
 
     std::string response_text;
     if (route_res.cache_hit && !route_res.cached_response.empty()) {
@@ -535,7 +505,7 @@ std::string SocketDaemon::ProcessRequestJson(const std::string& request_json, in
         s_info.session_id,
         original_prompt,
         route_res.category,
-        assigned_role,
+        "default",
         selected_model_ptr,
         response_text,
         route_res.cache_hit
@@ -545,7 +515,6 @@ std::string SocketDaemon::ProcessRequestJson(const std::string& request_json, in
     json_resp["status"] = "success";
     json_resp["session_id"] = s_info.session_id;
     json_resp["category"] = route_res.category;
-    json_resp["assigned_role"] = assigned_role;
     json_resp["execution_policy"] = exec_policy;
     json_resp["handover"] = handover;
     json_resp["handover_success"] = handover_success;

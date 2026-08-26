@@ -35,11 +35,7 @@ int main(int argc, char* argv[]) {
     std::cout << "[Model Config] Total models defined: " << model_cfg.models.size() << "\n";
 
     for (const auto& m : model_cfg.models) {
-        std::cout << "  - Model '" << m.name << "' (" << m.provider << "/" << m.model << ") -> Roles: [";
-        for (size_t i = 0; i < m.roles.size(); ++i) {
-            std::cout << m.roles[i] << (i + 1 < m.roles.size() ? ", " : "");
-        }
-        std::cout << "]\n";
+        std::cout << "  - Model '" << m.name << "' (" << m.provider << "/" << m.model << ")\n";
     }
 
     if (!daemon.Start()) {

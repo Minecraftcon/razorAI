@@ -48,9 +48,6 @@ public:
     void SetAvailableModels(const std::vector<std::string>& models) { available_models_ = models; }
     int GetSelectedModelIndex() const { return selected_model_idx_.load(); }
 
-    void SetAvailableRoles(const std::vector<std::string>& roles) { available_roles_ = roles; }
-    const std::vector<std::string>& GetAvailableRoles() const { return available_roles_; }
-
     bool IsModelThinking() const;
     void DispatchQueuedSteer();
 
@@ -85,7 +82,6 @@ private:
     // Model Picker State
     std::atomic<bool> show_model_picker_{false};
     std::vector<std::string> available_models_;
-    std::vector<std::string> available_roles_;
     std::atomic<int> selected_model_idx_{0};
     int model_menu_selected_ = 0;
 

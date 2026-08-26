@@ -892,8 +892,6 @@ void RazorUI::Run() {
         
         if (prompt_value_ == "/model" || prompt_value_ == "/models" || prompt_value_ == "/model " || prompt_value_ == "/models ") {
             return available_models_;
-        } else if (prompt_value_ == "/roles" || prompt_value_ == "/role" || prompt_value_ == "/role " || prompt_value_ == "/roles ") {
-            return available_roles_;
         } else if (prompt_value_ == "/skill" || prompt_value_ == "/skills" || prompt_value_ == "/skill " || prompt_value_ == "/skills ") {
             return SkillManager::Instance().GetSkillNames();
         } else if (prompt_value_.rfind("/model ", 0) == 0) {
@@ -907,17 +905,6 @@ void RazorUI::Run() {
                     current_matches.push_back(m);
                 }
             }
-        } else if (prompt_value_.rfind("/role ", 0) == 0) {
-            std::string term = prompt_value_.substr(6);
-            std::string term_lower = term;
-            std::transform(term_lower.begin(), term_lower.end(), term_lower.begin(), ::tolower);
-            for (const auto& r : available_roles_) {
-                std::string r_lower = r;
-                std::transform(r_lower.begin(), r_lower.end(), r_lower.begin(), ::tolower);
-                if (term.empty() || r_lower.find(term_lower) != std::string::npos) {
-                    current_matches.push_back(r);
-                }
-            }
         } else if (prompt_value_.rfind("/skill ", 0) == 0) {
             std::string term = prompt_value_.substr(7);
             auto skills = SkillManager::Instance().SearchSkills(term);
@@ -926,7 +913,7 @@ void RazorUI::Run() {
             }
         } else if (prompt_value_.find(' ') == std::string::npos) {
             std::string search_term = prompt_value_.substr(1);
-            std::vector<std::string> all_commands = {"models", "model", "roles", "role", "skills", "skill", "tasks", "session", "clear", "help"};
+            std::vector<std::string> all_commands = {"models", "model", "skills", "skill", "tasks", "session", "clear", "help"};
             for (const auto& cmd : all_commands) {
                 if (search_term.empty() || cmd.find(search_term) == 0) {
                     current_matches.push_back(cmd);
@@ -1066,8 +1053,6 @@ void RazorUI::Run() {
                 std::string match = current_matches[selected_command_index_.load()];
                 if (prompt_value_.rfind("/model", 0) == 0) {
                     prompt_value_ = "/model " + match;
-                } else if (prompt_value_.rfind("/role", 0) == 0) {
-                    prompt_value_ = "/role " + match;
                 } else if (prompt_value_.rfind("/skill", 0) == 0) {
                     prompt_value_ = "/skill " + match;
                 } else {
@@ -1137,7 +1122,6 @@ void RazorUI::Run() {
                             "| :--- | :--- |\n"
                             "| `/models`, `/model` | Open interactive model switcher (arrow keys + Enter) |\n"
                             "| `/model [name|idx]` | Switch directly to model by name or index |\n"
-                            "| `/roles`, `/role [name]` | List available agent roles or inspect role |\n"
                             "| `/skills [filter]` | Discover and list global and workspace skills |\n"
                             "| `/skill <name>` | View detailed instructions for a specific skill |\n"
                             "| `/tasks` | View active and background task processes table |\n"
@@ -1167,18 +1151,6 @@ void RazorUI::Run() {
                             } else {
                                 local_response = "Error: Model '" + arg + "' not found in configuration.";
                             }
-                        }
-                    } else if (cmd == "roles" || cmd == "role") {
-                        if (arg.empty()) {
-                            std::ostringstream ss;
-                            ss << "### Available Agent Roles\n\n";
-                            for (size_t i = 0; i < available_roles_.size(); ++i) {
-                                ss << " " << (i + 1) << ". **" << available_roles_[i] << "**\n";
-                            }
-                            ss << "\n*Use `/role <name>` to select or inspect.*";
-                            local_response = ss.str();
-                        } else {
-                            local_response = "Selected role: **" + arg + "** (prompts will prioritize role specialization)";
                         }
                     } else if (cmd == "skills") {
                         local_response = SkillManager::Instance().FormatSkillsList(arg);
@@ -1471,14 +1443,6 @@ void RazorUI::Run() {
                     bool is_active = (i == (size_t)selected_model_idx_.load());
                     std::string label = prefix + current_matches[i] + (is_active ? " [Active]" : "");
                     matching_elements.push_back(text(label) | color(col));
-                }
-            } else if (prompt_value_.rfind("/role", 0) == 0) {
-                matching_elements.push_back(text("Roles (select or type):") | bold | color(Color::GreenLight));
-                for (size_t i = 0; i < current_matches.size(); ++i) {
-                    bool is_selected = (i == (size_t)selected_command_index_.load());
-                    auto col = is_selected ? Color::GreenLight : Color::Green;
-                    auto prefix = is_selected ? "  > " : "    ";
-                    matching_elements.push_back(text(prefix + current_matches[i]) | color(col));
                 }
             } else if (prompt_value_.rfind("/skill", 0) == 0) {
                 matching_elements.push_back(text("Skills (select or type):") | bold | color(Color::MagentaLight));

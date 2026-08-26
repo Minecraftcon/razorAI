@@ -45,17 +45,6 @@ std::string Config::ExpandEnvVar(const std::string& value) {
     return val;
 }
 
-const ModelEntry* Config::GetModelForRole(const std::string& role) const {
-    for (const auto& m : models) {
-        for (const auto& r : m.roles) {
-            if (r == role) {
-                return &m;
-            }
-        }
-    }
-    return nullptr;
-}
-
 Config Config::LoadConfig(const std::string& path) {
     Config cfg;
     
@@ -141,16 +130,11 @@ Config Config::LoadConfig(const std::string& path) {
                 else if (key == "provider") current_model.provider = val;
                 else if (key == "apiKey") current_model.api_key = ExpandEnvVar(val);
                 else if (key == "endpoint") current_model.endpoint = val;
-                else if (key == "roles") current_model_list = "roles";
                 else if (key == "tools") current_model_list = "tools";
             } else if (dash_pos != std::string::npos && in_model_block) {
                 std::string list_val = Trim(line.substr(dash_pos + 2));
-                if (!list_val.empty()) {
-                    if (current_model_list == "tools") {
-                        current_model.tools.push_back(list_val);
-                    } else {
-                        current_model.roles.push_back(list_val);
-                    }
+                if (!list_val.empty() && current_model_list == "tools") {
+                    current_model.tools.push_back(list_val);
                 }
             }
             continue;
@@ -192,59 +176,10 @@ Config Config::LoadConfig(const std::string& path) {
 
     if (in_model_block && (!current_model.name.empty() || !current_model.provider.empty())) {
         ResolveDefaultEndpoint(current_model);
-                    cfg.models.push_back(current_model);
+        cfg.models.push_back(current_model);
     }
     if (in_emb_block && !current_embedding.provider.empty()) {
         cfg.embeddings.push_back(current_embedding);
-    }
-
-    // --- Load Role YAMLs from ~/.razor/roles/ (Placeholder plugin directory) ---
-    const char* home = std::getenv("HOME");
-    if (home) {
-        fs::path roles_dir = fs::path(home) / ".razor" / "roles";
-        if (fs::exists(roles_dir) && fs::is_directory(roles_dir)) {
-            for (const auto& entry : fs::directory_iterator(roles_dir)) {
-                if (entry.path().extension() == ".yaml" || entry.path().extension() == ".yml") {
-                    try {
-                        YAML::Node node = YAML::LoadFile(entry.path().string());
-                        if (node.IsMap()) {
-                            RoleConfig rc;
-                            if (node["roleName"]) {
-                                rc.role_name = node["roleName"].as<std::string>();
-                            } else if (node["name"]) {
-                                rc.role_name = node["name"].as<std::string>();
-                            } else {
-                                rc.role_name = entry.path().stem().string();
-                            }
-                            
-                            if (node["description"]) {
-                                rc.description = node["description"].as<std::string>();
-                            }
-
-                            if (node["sysPrompt"]) {
-                                if (node["sysPrompt"].IsSequence()) {
-                                    for (const auto& sp : node["sysPrompt"]) {
-                                        rc.sys_prompt.push_back(sp.as<std::string>());
-                                    }
-                                } else if (node["sysPrompt"].IsScalar()) {
-                                    rc.sys_prompt.push_back(node["sysPrompt"].as<std::string>());
-                                }
-                            }
-                            
-                            if (node["tools"] && node["tools"].IsSequence()) {
-                                for (const auto& tool : node["tools"]) {
-                                    rc.tools.push_back(tool.as<std::string>());
-                                }
-                            }
-
-                            cfg.roles[rc.role_name] = rc;
-                        }
-                    } catch (const YAML::Exception& e) {
-                        std::cerr << "[Razor Config] Failed to parse role YAML: " << entry.path() << " - " << e.what() << "\n";
-                    }
-                }
-            }
-        }
     }
 
     return cfg;

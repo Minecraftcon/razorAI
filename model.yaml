@@ -11,10 +11,6 @@ models:
   provider: mistral
   apiKey: ${MISTRAL_API_KEY}
   endpoint: https://api.mistral.ai/v1/chat/completions
-  roles:
-  - thinkchat
-  - builder
-  - builderflow
   tools:
   - read_files
   - write_files
@@ -39,12 +35,6 @@ models:
   model: devstral-2512
   provider: mistral
   apiKey: ${MISTRAL_API_KEY}
-  roles:
-  - thinkchat
-  - builder
-  - debug
-  - small_task
-  - builderflow
   tools:
   - all
 embeddings:

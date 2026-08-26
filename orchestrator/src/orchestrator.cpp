@@ -17,12 +17,10 @@ OrchestratorEngine::OrchestratorEngine(const std::string& config_path)
 void OrchestratorEngine::HandlePrompt(const std::string& prompt) {
     if (prompt.empty()) return;
 
-    // Detect role and assigned model from model.yaml
-    std::string role = "builder"; // Default role
-    const ModelEntry* assigned_model = config_.GetModelForRole(role);
+    const ModelEntry* assigned_model = config_.models.empty() ? nullptr : &config_.models[0];
 
     if (assigned_model) {
-        std::cout << "\n[RAZOR Engine] Auto-detected Role: '" << role << "' -> Model: "
+        std::cout << "\n[RAZOR Engine] Using Model: "
                   << assigned_model->name << " (" << assigned_model->provider << "/"
                   << assigned_model->model << ")\n";
     }

@@ -400,12 +400,6 @@ int main() {
     }
     if (model_names.empty()) model_names.push_back("Default Model");
     ui.SetAvailableModels(model_names);
-
-    std::vector<std::string> role_names;
-    for (const auto& r : cfg.roles) {
-        role_names.push_back(r.first);
-    }
-    ui.SetAvailableRoles(role_names);
     
     ui.SetSubmitCallback([&ui, model_names](const std::string& prompt) {
         std::thread([prompt, &ui, model_names]() {
