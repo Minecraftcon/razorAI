@@ -692,24 +692,18 @@ static Elements RenderMarkdown(const std::string& raw_text) {
                     mode = tag_header.substr(mode_pos + 6);
                 }
 
-                Element tool_label;
-                Element tool_arg;
+                std::string label = "WebSearch";
                 if (mode == "fetch") {
-                    tool_label = text("WebFetch") | bold | color(Color::CyanLight);
-                    tool_arg = text(truncate(arg)) | color(Color::Cyan);
+                    label = "WebFetch";
                 } else if (mode == "search_fetch") {
-                    tool_label = text("WebSearchFetch") | bold | color(Color::CyanLight);
-                    tool_arg = text(truncate(arg)) | color(Color::White);
-                } else {
-                    tool_label = text("WebSearch") | bold | color(Color::CyanLight);
-                    tool_arg = text(truncate(arg)) | color(Color::White);
+                    label = "WebSearch";
                 }
 
                 auto el = hbox({
-                    text("● ") | color(Color::Cyan),
-                    tool_label,
+                    text("● ") | color(Color::Green),
+                    text(label) | bold | color(Color::GrayLight),
                     text("(") | color(Color::GrayDark),
-                    tool_arg,
+                    text(truncate(arg)) | color(Color::White),
                     text(")") | color(Color::GrayDark),
                 });
                 vbox_lines.push_back(el);
@@ -780,6 +774,50 @@ static Elements RenderMarkdown(const std::string& raw_text) {
         flush_table();
 
         std::string content = line;
+
+        // Agentic Level Theming
+        if (content.rfind("[SYSTEM]", 0) == 0) {
+            vbox_lines.push_back(hbox({
+                text("⚙ SYSTEM") | bold | color(Color::CyanLight),
+                text(" ") | color(Color::Default),
+                ParseInline(content.substr(8))
+            }));
+            pending_empty_lines = 0;
+            continue;
+        } else if (content.rfind("[INFO]", 0) == 0) {
+            vbox_lines.push_back(hbox({
+                text("ℹ INFO") | bold | color(Color::BlueLight),
+                text(" ") | color(Color::Default),
+                ParseInline(content.substr(6))
+            }));
+            pending_empty_lines = 0;
+            continue;
+        } else if (content.rfind("[ERROR]", 0) == 0) {
+            vbox_lines.push_back(hbox({
+                text("✖ ERROR") | bold | color(Color::RedLight),
+                text(" ") | color(Color::Default),
+                ParseInline(content.substr(7))
+            }));
+            pending_empty_lines = 0;
+            continue;
+        } else if (content.rfind("[WARN]", 0) == 0) {
+            vbox_lines.push_back(hbox({
+                text("⚠ WARN") | bold | color(Color::YellowLight),
+                text(" ") | color(Color::Default),
+                ParseInline(content.substr(6))
+            }));
+            pending_empty_lines = 0;
+            continue;
+        } else if (content.rfind("[AGENT]", 0) == 0) {
+            vbox_lines.push_back(hbox({
+                text("🤖 AGENT") | bold | color(Color::MagentaLight),
+                text(" ") | color(Color::Default),
+                ParseInline(content.substr(7))
+            }));
+            pending_empty_lines = 0;
+            continue;
+        }
+
 
         // Blockquotes
         int quote_level = 0;
@@ -1058,8 +1096,8 @@ void RazorUI::Run() {
                 std::lock_guard<std::mutex> lock(history_mutex_);
                 for (auto& msg : history_) {
                     if (!msg.is_loading && msg.streamed_length < msg.response.size()) {
-                        // Stream characters over time
-                        msg.streamed_length = std::min(msg.response.size(), msg.streamed_length + 5);
+                        // Stream characters over time (2x faster typewriter effect)
+                        msg.streamed_length = std::min(msg.response.size(), msg.streamed_length + 10);
                     }
                 }
             }
