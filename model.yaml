@@ -53,6 +53,13 @@ models:
   apiKey: ${MISTRAL_API_KEY}
   tools:
   - all
+- name: Kimi K3
+  model: moonshotai/kimi-k3
+  provider: nvidia
+  apiKey: ${NVIDIA_API_KEY}
+  endpoint: https://integrate.api.nvidia.com/v1/chat/completions
+  tools:
+  - all
 embeddings:
 - provider: gemini
   model: gemini-embedding-2

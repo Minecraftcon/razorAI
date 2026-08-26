@@ -28,6 +28,7 @@ static void ResolveDefaultEndpoint(ModelEntry& model) {
     if (p == "mistral") model.endpoint = "https://api.mistral.ai/v1/chat/completions";
     else if (p == "gemini") model.endpoint = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
     else if (p == "openai") model.endpoint = "https://api.openai.com/v1/chat/completions";
+    else if (p == "nvidia" || p == "nim") model.endpoint = "https://integrate.api.nvidia.com/v1/chat/completions";
     else if (p == "grok" || p == "xai") model.endpoint = "https://api.x.ai/v1/chat/completions";
     else if (p == "anthropic") model.endpoint = "https://api.anthropic.com/v1/messages"; 
 }
