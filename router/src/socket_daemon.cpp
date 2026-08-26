@@ -558,19 +558,40 @@ std::string SocketDaemon::ProcessRequestJson(const std::string& request_json, in
                 json resp_json = json::parse(api_response);
                 if (resp_json.contains("choices") && !resp_json["choices"].empty()) {
                     auto& message = resp_json["choices"][0]["message"];
+                    std::string text_content = "";
+                    if (message.contains("content") && !message["content"].is_null() && message["content"].is_string()) {
+                        text_content = message["content"].get<std::string>();
+                    }
+
                     if (message.contains("tool_calls") && !message["tool_calls"].empty()) {
                         // Extract tool calls and normalize
                         json normalized_calls = json::array();
                         for (auto& tc : message["tool_calls"]) {
                             json norm;
                             norm["tool"] = tc["function"]["name"];
-                            norm["tool_call_id"] = tc["id"];
-                            norm["args"] = json::parse(tc["function"]["arguments"].get<std::string>());
+                            norm["tool_call_id"] = tc.value("id", "");
+                            if (tc.contains("function") && tc["function"].contains("arguments")) {
+                                try {
+                                    norm["args"] = json::parse(tc["function"]["arguments"].get<std::string>());
+                                } catch (...) {
+                                    norm["args"] = json::object();
+                                }
+                            } else {
+                                norm["args"] = json::object();
+                            }
                             normalized_calls.push_back(norm);
                         }
-                        response_text = normalized_calls.dump();
-                    } else if (message.contains("content") && !message["content"].is_null()) {
-                        response_text = message["content"].get<std::string>();
+                        
+                        if (!text_content.empty()) {
+                            json combined;
+                            combined["content"] = text_content;
+                            combined["tool_calls"] = normalized_calls;
+                            response_text = combined.dump();
+                        } else {
+                            response_text = normalized_calls.dump();
+                        }
+                    } else if (!text_content.empty()) {
+                        response_text = text_content;
                     } else {
                         response_text = "[Router Output] API returned empty content.";
                     }

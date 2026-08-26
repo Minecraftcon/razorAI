@@ -165,7 +165,20 @@ std::vector<nlohmann::json> SessionManager::GetHistory(const std::string& sessio
             nlohmann::json assistant_msg;
             try {
                 nlohmann::json rj = nlohmann::json::parse(resp);
-                if (rj.is_array() && !rj.empty() && rj[0].contains("tool")) {
+                if (rj.is_object() && rj.contains("tool_calls") && rj["tool_calls"].is_array() && !rj["tool_calls"].empty()) {
+                    is_tc = true;
+                    assistant_msg["role"] = "assistant";
+                    assistant_msg["content"] = rj.value("content", "");
+                    assistant_msg["tool_calls"] = nlohmann::json::array();
+                    for (auto& tc : rj["tool_calls"]) {
+                        nlohmann::json t;
+                        t["id"] = tc.value("tool_call_id", "");
+                        t["type"] = "function";
+                        t["function"]["name"] = tc.value("tool", "");
+                        t["function"]["arguments"] = tc.contains("args") ? tc["args"].dump() : "{}";
+                        assistant_msg["tool_calls"].push_back(t);
+                    }
+                } else if (rj.is_array() && !rj.empty() && rj[0].contains("tool")) {
                     is_tc = true;
                     assistant_msg["role"] = "assistant";
                     assistant_msg["content"] = "";

@@ -164,17 +164,34 @@ void ProcessAndExecute(razor::RazorUI& ui, std::string api_response) {
             }
         }
 
-        if (parsed_resp.is_object() && parsed_resp.contains("tool") && parsed_resp.contains("args")) {
-            parsed_resp = json::array({parsed_resp});
+        std::string leading_text = "";
+        json tools_array = json::array();
+
+        if (parsed_resp.is_object()) {
+            if (parsed_resp.contains("content") && parsed_resp["content"].is_string() && !parsed_resp["content"].get<std::string>().empty()) {
+                leading_text = parsed_resp["content"].get<std::string>();
+            }
+            if (parsed_resp.contains("tool_calls") && parsed_resp["tool_calls"].is_array()) {
+                tools_array = parsed_resp["tool_calls"];
+            } else if (parsed_resp.contains("tool") && parsed_resp.contains("args")) {
+                tools_array.push_back(parsed_resp);
+            }
+        } else if (parsed_resp.is_array()) {
+            tools_array = parsed_resp;
         }
         
-        if (parsed_resp.is_array()) {
+        if (!tools_array.empty() && tools_array[0].is_object() && tools_array[0].contains("tool")) {
             is_tool_call = true;
             
+            // Print the model's text/thought first before displaying tool executions!
+            if (!leading_text.empty()) {
+                ui.ProvideResponse(leading_text);
+            }
+
             json results_array = json::array();
             bool should_continue_any = false;
             
-            for (auto& tc : parsed_resp) {
+            for (auto& tc : tools_array) {
                 if (tc.contains("tool") && tc.contains("args")) {
                     std::string tool = tc["tool"].get<std::string>();
                     std::string tool_call_id = "";
