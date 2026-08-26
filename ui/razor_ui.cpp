@@ -679,6 +679,44 @@ static Elements RenderMarkdown(const std::string& raw_text) {
                 continue;
             }
         }
+        if (line.rfind("[TOOL_EXECUTION:web_search", 0) == 0) {
+            flush_table();
+            size_t end_bracket = line.find(']');
+            if (end_bracket != std::string::npos) {
+                std::string tag_header = line.substr(16, end_bracket - 16); // e.g. web_search|STATUS:0|MODE:search
+                std::string arg = safe_extract_arg(line, end_bracket);
+                
+                std::string mode = "search";
+                size_t mode_pos = tag_header.find("|MODE:");
+                if (mode_pos != std::string::npos) {
+                    mode = tag_header.substr(mode_pos + 6);
+                }
+
+                Element tool_label;
+                Element tool_arg;
+                if (mode == "fetch") {
+                    tool_label = text("WebFetch") | bold | color(Color::CyanLight);
+                    tool_arg = text(truncate(arg)) | color(Color::Cyan);
+                } else if (mode == "search_fetch") {
+                    tool_label = text("WebSearchFetch") | bold | color(Color::CyanLight);
+                    tool_arg = text(truncate(arg)) | color(Color::White);
+                } else {
+                    tool_label = text("WebSearch") | bold | color(Color::CyanLight);
+                    tool_arg = text(truncate(arg)) | color(Color::White);
+                }
+
+                auto el = hbox({
+                    text("● ") | color(Color::Cyan),
+                    tool_label,
+                    text("(") | color(Color::GrayDark),
+                    tool_arg,
+                    text(")") | color(Color::GrayDark),
+                });
+                vbox_lines.push_back(el);
+                pending_empty_lines = 0;
+                continue;
+            }
+        }
         if (line.rfind("[TOOL_EXECUTION_ERROR]", 0) == 0) {
             flush_table();
             std::string msg_text = line.substr(22);

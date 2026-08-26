@@ -365,8 +365,14 @@ void ProcessAndExecute(razor::RazorUI& ui, std::string api_response) {
                             if (tc["args"].contains("fetch")) fetch_url = tc["args"]["fetch"].get<std::string>();
                             else if (tc["args"].contains("url")) fetch_url = tc["args"]["url"].get<std::string>();
                         }
-                        std::string tag_info = !search_query.empty() ? search_query : fetch_url;
-                        std::string tag = "[TOOL_EXECUTION:web_search|STATUS:0] " + tag_info;
+                        std::string tag;
+                        if (!search_query.empty() && !fetch_url.empty()) {
+                            tag = "[TOOL_EXECUTION:web_search|STATUS:0|MODE:search_fetch] " + search_query + " -> " + fetch_url;
+                        } else if (!fetch_url.empty()) {
+                            tag = "[TOOL_EXECUTION:web_search|STATUS:0|MODE:fetch] " + fetch_url;
+                        } else {
+                            tag = "[TOOL_EXECUTION:web_search|STATUS:0|MODE:search] " + search_query;
+                        }
                         ui.ProvideResponse(tag);
 
                         std::string output = razor::WebSearch::Execute(search_query, fetch_url);
