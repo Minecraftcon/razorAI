@@ -60,16 +60,17 @@ std::vector<SkillInfo> SkillManager::DiscoverSkills(bool force_refresh) {
     cached_skills_.clear();
     std::vector<std::string> search_roots;
 
-    // Razor standalone packaged assets (primary self-contained skill catalog)
-    search_roots.push_back("assets/skills");
-    search_roots.push_back("assets/plugins");
-    search_roots.push_back(".agents/skills");
-
+    // 1. Primary User Razor Skills Directory
     const char* home = std::getenv("HOME");
     if (home) {
         search_roots.push_back(std::string(home) + "/.razor/skills");
         search_roots.push_back(std::string(home) + "/.razor/plugins");
     }
+
+    // 2. Workspace & Packaged Assets Catalog
+    search_roots.push_back("assets/skills");
+    search_roots.push_back("assets/plugins");
+    search_roots.push_back(".agents/skills");
 
     for (const auto& root_str : search_roots) {
         fs::path root_path(root_str);

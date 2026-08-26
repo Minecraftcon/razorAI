@@ -44,6 +44,8 @@ def main():
     plugins_dest.mkdir(parents=True, exist_ok=True)
 
     home = os.path.expanduser("~")
+    razor_skills_dest = Path(home) / ".razor" / "skills"
+    razor_skills_dest.mkdir(parents=True, exist_ok=True)
     search_roots = [
         ("global_skills", Path(home) / ".gemini" / "config" / "skills"),
         ("plugins", Path(home) / ".gemini" / "config" / "plugins"),
@@ -85,22 +87,30 @@ def main():
                     plugin_name = parts[0]
 
             # Copy skill directory to assets
+            # Copy to assets and ~/.razor/skills
             if source_type == "plugins":
                 dest_dir = plugins_dest / plugin_name / "skills" / skill_dir.name
             else:
                 dest_dir = skills_dest / skill_dir.name
 
             dest_dir.mkdir(parents=True, exist_ok=True)
+            razor_dest_dir = razor_skills_dest / skill_dir.name
+            razor_dest_dir.mkdir(parents=True, exist_ok=True)
 
             # Copy all files from skill_dir (scripts, examples, references, etc.)
             for item in skill_dir.iterdir():
                 dest_item = dest_dir / item.name
+                razor_item = razor_dest_dir / item.name
                 if item.is_dir():
                     if dest_item.exists():
                         shutil.rmtree(dest_item)
                     shutil.copytree(item, dest_item)
+                    if razor_item.exists():
+                        shutil.rmtree(razor_item)
+                    shutil.copytree(item, razor_item)
                 else:
                     shutil.copy2(item, dest_item)
+                    shutil.copy2(item, razor_item)
 
             manifest_entry = {
                 "name": name,
@@ -108,6 +118,7 @@ def main():
                 "source_type": source_type,
                 "plugin": plugin_name,
                 "skill_path": str(dest_dir / skill_file.name),
+                "razor_path": str(razor_dest_dir / skill_file.name),
                 "rel_path": str((dest_dir / skill_file.name).relative_to(repo_root)),
             }
             manifest.append(manifest_entry)
@@ -119,11 +130,15 @@ def main():
     with open(manifest_path, "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2)
 
+    # Also copy manifest to ~/.razor/
+    shutil.copy2(manifest_path, Path(home) / ".razor" / "skills_manifest.json")
+
     print("\n" + "=" * 60)
     print(f" Packaging Complete!")
     print(f" Total Skills Packaged : {total_copied}")
     print(f" Manifest Generated    : {manifest_path.relative_to(repo_root)}")
     print(f" Assets Location       : {assets_dir.relative_to(repo_root)}")
+    print(f" Razor User Location   : {razor_skills_dest}")
     print("=" * 60)
 
 if __name__ == "__main__":

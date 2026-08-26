@@ -5,6 +5,7 @@
     "source_type": "global_skills",
     "plugin": "global_skills",
     "skill_path": "/home/shado/Documents/Agentic/assets/skills/android-ui-creator/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/android-ui-creator/SKILL.md",
     "rel_path": "assets/skills/android-ui-creator/SKILL.md"
   },
   {
@@ -13,6 +14,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/uv/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/uv/SKILL.md",
     "rel_path": "assets/plugins/science/skills/uv/SKILL.md"
   },
   {
@@ -21,6 +23,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/ucsc_conservation_and_tfbs/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/ucsc_conservation_and_tfbs/SKILL.md",
     "rel_path": "assets/plugins/science/skills/ucsc_conservation_and_tfbs/SKILL.md"
   },
   {
@@ -29,6 +32,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/clinvar_database/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/clinvar_database/SKILL.md",
     "rel_path": "assets/plugins/science/skills/clinvar_database/SKILL.md"
   },
   {
@@ -37,6 +41,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/protein_sequence_msa/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/protein_sequence_msa/SKILL.md",
     "rel_path": "assets/plugins/science/skills/protein_sequence_msa/SKILL.md"
   },
   {
@@ -45,6 +50,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/alphagenome_single_variant_analysis/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/alphagenome_single_variant_analysis/SKILL.md",
     "rel_path": "assets/plugins/science/skills/alphagenome_single_variant_analysis/SKILL.md"
   },
   {
@@ -53,6 +59,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/interpro_database/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/interpro_database/SKILL.md",
     "rel_path": "assets/plugins/science/skills/interpro_database/SKILL.md"
   },
   {
@@ -61,6 +68,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/encode_ccres_database/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/encode_ccres_database/SKILL.md",
     "rel_path": "assets/plugins/science/skills/encode_ccres_database/SKILL.md"
   },
   {
@@ -69,6 +77,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/unibind_database/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/unibind_database/SKILL.md",
     "rel_path": "assets/plugins/science/skills/unibind_database/SKILL.md"
   },
   {
@@ -77,6 +86,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/reactome_database/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/reactome_database/SKILL.md",
     "rel_path": "assets/plugins/science/skills/reactome_database/SKILL.md"
   },
   {
@@ -85,6 +95,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/clinical_trials_database/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/clinical_trials_database/SKILL.md",
     "rel_path": "assets/plugins/science/skills/clinical_trials_database/SKILL.md"
   },
   {
@@ -93,6 +104,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/protein_sequence_similarity_search/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/protein_sequence_similarity_search/SKILL.md",
     "rel_path": "assets/plugins/science/skills/protein_sequence_similarity_search/SKILL.md"
   },
   {
@@ -101,6 +113,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/opentargets_database/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/opentargets_database/SKILL.md",
     "rel_path": "assets/plugins/science/skills/opentargets_database/SKILL.md"
   },
   {
@@ -109,6 +122,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/openfda_database/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/openfda_database/SKILL.md",
     "rel_path": "assets/plugins/science/skills/openfda_database/SKILL.md"
   },
   {
@@ -117,6 +131,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/scienceskillscommon/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/scienceskillscommon/SKILL.md",
     "rel_path": "assets/plugins/science/skills/scienceskillscommon/SKILL.md"
   },
   {
@@ -125,6 +140,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/quickgo_database/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/quickgo_database/SKILL.md",
     "rel_path": "assets/plugins/science/skills/quickgo_database/SKILL.md"
   },
   {
@@ -133,6 +149,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/pymol/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/pymol/SKILL.md",
     "rel_path": "assets/plugins/science/skills/pymol/SKILL.md"
   },
   {
@@ -141,6 +158,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/pubchem_database/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/pubchem_database/SKILL.md",
     "rel_path": "assets/plugins/science/skills/pubchem_database/SKILL.md"
   },
   {
@@ -149,6 +167,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/alphafold_database_fetch_and_analyze/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/alphafold_database_fetch_and_analyze/SKILL.md",
     "rel_path": "assets/plugins/science/skills/alphafold_database_fetch_and_analyze/SKILL.md"
   },
   {
@@ -157,6 +176,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/literature_search_arxiv/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/literature_search_arxiv/SKILL.md",
     "rel_path": "assets/plugins/science/skills/literature_search_arxiv/SKILL.md"
   },
   {
@@ -165,6 +185,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/gtex_database/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/gtex_database/SKILL.md",
     "rel_path": "assets/plugins/science/skills/gtex_database/SKILL.md"
   },
   {
@@ -173,6 +194,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/pubmed_database/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/pubmed_database/SKILL.md",
     "rel_path": "assets/plugins/science/skills/pubmed_database/SKILL.md"
   },
   {
@@ -181,6 +203,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/literature_search_openalex/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/literature_search_openalex/SKILL.md",
     "rel_path": "assets/plugins/science/skills/literature_search_openalex/SKILL.md"
   },
   {
@@ -189,6 +212,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/embl_ebi_ols/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/embl_ebi_ols/SKILL.md",
     "rel_path": "assets/plugins/science/skills/embl_ebi_ols/SKILL.md"
   },
   {
@@ -197,6 +221,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/workflow_skill_creator/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/workflow_skill_creator/SKILL.md",
     "rel_path": "assets/plugins/science/skills/workflow_skill_creator/SKILL.md"
   },
   {
@@ -205,6 +230,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/uniprot_database/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/uniprot_database/SKILL.md",
     "rel_path": "assets/plugins/science/skills/uniprot_database/SKILL.md"
   },
   {
@@ -213,6 +239,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/pdb_database/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/pdb_database/SKILL.md",
     "rel_path": "assets/plugins/science/skills/pdb_database/SKILL.md"
   },
   {
@@ -221,6 +248,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/gnomad_database/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/gnomad_database/SKILL.md",
     "rel_path": "assets/plugins/science/skills/gnomad_database/SKILL.md"
   },
   {
@@ -229,6 +257,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/literature_search_europepmc/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/literature_search_europepmc/SKILL.md",
     "rel_path": "assets/plugins/science/skills/literature_search_europepmc/SKILL.md"
   },
   {
@@ -237,6 +266,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/ncbi_sequence_fetch/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/ncbi_sequence_fetch/SKILL.md",
     "rel_path": "assets/plugins/science/skills/ncbi_sequence_fetch/SKILL.md"
   },
   {
@@ -245,6 +275,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/chembl_database/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/chembl_database/SKILL.md",
     "rel_path": "assets/plugins/science/skills/chembl_database/SKILL.md"
   },
   {
@@ -253,6 +284,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/literature_search_biorxiv/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/literature_search_biorxiv/SKILL.md",
     "rel_path": "assets/plugins/science/skills/literature_search_biorxiv/SKILL.md"
   },
   {
@@ -261,6 +293,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/ensembl_database/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/ensembl_database/SKILL.md",
     "rel_path": "assets/plugins/science/skills/ensembl_database/SKILL.md"
   },
   {
@@ -269,6 +302,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/human_protein_atlas_database/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/human_protein_atlas_database/SKILL.md",
     "rel_path": "assets/plugins/science/skills/human_protein_atlas_database/SKILL.md"
   },
   {
@@ -277,6 +311,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/string_database/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/string_database/SKILL.md",
     "rel_path": "assets/plugins/science/skills/string_database/SKILL.md"
   },
   {
@@ -285,6 +320,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/jaspar_database/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/jaspar_database/SKILL.md",
     "rel_path": "assets/plugins/science/skills/jaspar_database/SKILL.md"
   },
   {
@@ -293,6 +329,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/dbsnp_database/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/dbsnp_database/SKILL.md",
     "rel_path": "assets/plugins/science/skills/dbsnp_database/SKILL.md"
   },
   {
@@ -301,6 +338,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/foldseek_structural_search/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/foldseek_structural_search/SKILL.md",
     "rel_path": "assets/plugins/science/skills/foldseek_structural_search/SKILL.md"
   },
   {
@@ -309,6 +347,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/credentials/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/credentials/SKILL.md",
     "rel_path": "assets/plugins/science/skills/credentials/SKILL.md"
   },
   {
@@ -317,6 +356,7 @@
     "source_type": "plugins",
     "plugin": "science",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/science/skills/predictingthepast/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/predictingthepast/SKILL.md",
     "rel_path": "assets/plugins/science/skills/predictingthepast/SKILL.md"
   },
   {
@@ -325,6 +365,7 @@
     "source_type": "plugins",
     "plugin": "firebase",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/firebase/skills/firebase_ai_logic_basics/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/firebase_ai_logic_basics/SKILL.md",
     "rel_path": "assets/plugins/firebase/skills/firebase_ai_logic_basics/SKILL.md"
   },
   {
@@ -333,6 +374,7 @@
     "source_type": "plugins",
     "plugin": "firebase",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/firebase/skills/firebase_app_hosting_basics/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/firebase_app_hosting_basics/SKILL.md",
     "rel_path": "assets/plugins/firebase/skills/firebase_app_hosting_basics/SKILL.md"
   },
   {
@@ -341,6 +383,7 @@
     "source_type": "plugins",
     "plugin": "firebase",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/firebase/skills/firebase_auth_basics/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/firebase_auth_basics/SKILL.md",
     "rel_path": "assets/plugins/firebase/skills/firebase_auth_basics/SKILL.md"
   },
   {
@@ -349,6 +392,7 @@
     "source_type": "plugins",
     "plugin": "firebase",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/firebase/skills/firebase_basics/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/firebase_basics/SKILL.md",
     "rel_path": "assets/plugins/firebase/skills/firebase_basics/SKILL.md"
   },
   {
@@ -357,6 +401,7 @@
     "source_type": "plugins",
     "plugin": "firebase",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/firebase/skills/firebase_crashlytics/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/firebase_crashlytics/SKILL.md",
     "rel_path": "assets/plugins/firebase/skills/firebase_crashlytics/SKILL.md"
   },
   {
@@ -365,6 +410,7 @@
     "source_type": "plugins",
     "plugin": "firebase",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/firebase/skills/firebase_data_connect_basics/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/firebase_data_connect_basics/SKILL.md",
     "rel_path": "assets/plugins/firebase/skills/firebase_data_connect_basics/SKILL.md"
   },
   {
@@ -373,6 +419,7 @@
     "source_type": "plugins",
     "plugin": "firebase",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/firebase/skills/firebase_firestore/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/firebase_firestore/SKILL.md",
     "rel_path": "assets/plugins/firebase/skills/firebase_firestore/SKILL.md"
   },
   {
@@ -381,6 +428,7 @@
     "source_type": "plugins",
     "plugin": "firebase",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/firebase/skills/firebase_hosting_basics/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/firebase_hosting_basics/SKILL.md",
     "rel_path": "assets/plugins/firebase/skills/firebase_hosting_basics/SKILL.md"
   },
   {
@@ -389,6 +437,7 @@
     "source_type": "plugins",
     "plugin": "firebase",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/firebase/skills/firebase_remote_config_basics/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/firebase_remote_config_basics/SKILL.md",
     "rel_path": "assets/plugins/firebase/skills/firebase_remote_config_basics/SKILL.md"
   },
   {
@@ -397,6 +446,7 @@
     "source_type": "plugins",
     "plugin": "firebase",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/firebase/skills/firebase_security_rules_auditor/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/firebase_security_rules_auditor/SKILL.md",
     "rel_path": "assets/plugins/firebase/skills/firebase_security_rules_auditor/SKILL.md"
   },
   {
@@ -405,6 +455,7 @@
     "source_type": "plugins",
     "plugin": "firebase",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/firebase/skills/xcode_project_setup/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/xcode_project_setup/SKILL.md",
     "rel_path": "assets/plugins/firebase/skills/xcode_project_setup/SKILL.md"
   },
   {
@@ -413,6 +464,7 @@
     "source_type": "plugins",
     "plugin": "chrome-devtools-plugin",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/chrome-devtools-plugin/skills/a11y-debugging/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/a11y-debugging/SKILL.md",
     "rel_path": "assets/plugins/chrome-devtools-plugin/skills/a11y-debugging/SKILL.md"
   },
   {
@@ -421,6 +473,7 @@
     "source_type": "plugins",
     "plugin": "chrome-devtools-plugin",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/chrome-devtools-plugin/skills/chrome-devtools/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/chrome-devtools/SKILL.md",
     "rel_path": "assets/plugins/chrome-devtools-plugin/skills/chrome-devtools/SKILL.md"
   },
   {
@@ -429,6 +482,7 @@
     "source_type": "plugins",
     "plugin": "chrome-devtools-plugin",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/chrome-devtools-plugin/skills/debug-optimize-lcp/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/debug-optimize-lcp/SKILL.md",
     "rel_path": "assets/plugins/chrome-devtools-plugin/skills/debug-optimize-lcp/SKILL.md"
   },
   {
@@ -437,6 +491,7 @@
     "source_type": "plugins",
     "plugin": "chrome-devtools-plugin",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/chrome-devtools-plugin/skills/memory-leak-debugging/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/memory-leak-debugging/SKILL.md",
     "rel_path": "assets/plugins/chrome-devtools-plugin/skills/memory-leak-debugging/SKILL.md"
   },
   {
@@ -445,6 +500,7 @@
     "source_type": "plugins",
     "plugin": "chrome-devtools-plugin",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/chrome-devtools-plugin/skills/troubleshooting/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/troubleshooting/SKILL.md",
     "rel_path": "assets/plugins/chrome-devtools-plugin/skills/troubleshooting/SKILL.md"
   },
   {
@@ -453,6 +509,7 @@
     "source_type": "plugins",
     "plugin": "android-cli-plugin",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/android-cli-plugin/skills/skills/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/skills/SKILL.md",
     "rel_path": "assets/plugins/android-cli-plugin/skills/skills/SKILL.md"
   },
   {
@@ -461,6 +518,7 @@
     "source_type": "plugins",
     "plugin": "modern-web-guidance-plugin",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/modern-web-guidance-plugin/skills/chrome-extensions/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/chrome-extensions/SKILL.md",
     "rel_path": "assets/plugins/modern-web-guidance-plugin/skills/chrome-extensions/SKILL.md"
   },
   {
@@ -469,6 +527,7 @@
     "source_type": "plugins",
     "plugin": "modern-web-guidance-plugin",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/modern-web-guidance-plugin/skills/modern-web-guidance/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/modern-web-guidance/SKILL.md",
     "rel_path": "assets/plugins/modern-web-guidance-plugin/skills/modern-web-guidance/SKILL.md"
   },
   {
@@ -477,6 +536,7 @@
     "source_type": "plugins",
     "plugin": "google-antigravity-sdk",
     "skill_path": "/home/shado/Documents/Agentic/assets/plugins/google-antigravity-sdk/skills/google-antigravity-sdk/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/google-antigravity-sdk/SKILL.md",
     "rel_path": "assets/plugins/google-antigravity-sdk/skills/google-antigravity-sdk/SKILL.md"
   },
   {
@@ -485,6 +545,7 @@
     "source_type": "builtin",
     "plugin": "builtin",
     "skill_path": "/home/shado/Documents/Agentic/assets/skills/agy-customizations/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/agy-customizations/SKILL.md",
     "rel_path": "assets/skills/agy-customizations/SKILL.md"
   },
   {
@@ -493,6 +554,7 @@
     "source_type": "builtin",
     "plugin": "builtin",
     "skill_path": "/home/shado/Documents/Agentic/assets/skills/antigravity_guide/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/antigravity_guide/SKILL.md",
     "rel_path": "assets/skills/antigravity_guide/SKILL.md"
   },
   {
@@ -501,6 +563,7 @@
     "source_type": "builtin",
     "plugin": "builtin",
     "skill_path": "/home/shado/Documents/Agentic/assets/skills/permissioned-github/SKILL.md",
+    "razor_path": "/home/shado/.razor/skills/permissioned-github/SKILL.md",
     "rel_path": "assets/skills/permissioned-github/SKILL.md"
   }
 ]
