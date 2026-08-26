@@ -1,5 +1,6 @@
 #include "socket_daemon.hpp"
 #include "task_manager.hpp"
+#include "skill_manager.hpp"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -273,9 +274,17 @@ std::string SocketDaemon::ProcessRequestJson(const std::string& request_json, in
             "  * NEVER append '&', 'nohup', 'disown', 'screen', or 'tmux' to commands. The built-in Task Manager automatically manages and tracks background execution with PTY logging.\n"
             "- BACKGROUND TASKS MANAGEMENT:\n"
             "  * Use 'manage_task' with action='view' to check status/logs, 'send_keycode' to send stdin input, and 'kill' to terminate background jobs.\n"
-            "- SKILL EXECUTION:\n"
-            "  * When a skill is activated (via 'Skill:<path>'), strictly follow the specialized procedures, references, and scripts defined in that skill.\n"
+            "- SKILLS POLICY & EXECUTION:\n"
+            "  * You have access to the specialized skills catalog.\n"
+            "  * USE POLICY: Only use a skill when the user's task specifically matches that domain or the user explicitly activates/requests the skill (e.g. via '[S: <name>]' or 'Skill:<path>').\n"
+            "  * MANDATORY READING: When activating or using a skill, you MUST read the full skill instructions using 'read_file' on its Path before taking action, then strictly adhere to the skill's procedures, scripts, and rules.\n"
         );
+
+        // Inject Skills Directory with paths and descriptions
+        std::string skills_directory = SkillManager::Instance().FormatSkillsForSystemPrompt();
+        if (!skills_directory.empty()) {
+            sys_prompts.push_back(skills_directory);
+        }
 
         std::vector<std::string> combined_tools;
         if (selected_model) {

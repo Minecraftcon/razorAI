@@ -198,4 +198,23 @@ const SkillInfo* SkillManager::GetSkill(const std::string& skill_name) {
     return nullptr;
 }
 
+std::string SkillManager::FormatSkillsForSystemPrompt() {
+    auto skills = DiscoverSkills();
+    if (skills.empty()) return "";
+
+    std::ostringstream ss;
+    ss << "AVAILABLE SPECIALIZED SKILLS DIRECTORY:\n"
+       << "- Skills Policy: Only activate and use a skill when the user's task specifically matches that domain or the user explicitly requests/activates it (e.g. via '[S: <skill>]' or 'Skill:<path>').\n"
+       << "- Mandatory Skill Reading: When you activate a skill, you MUST read its full instructions using 'read_file' on its Path before executing actions.\n\n";
+
+    for (const auto& s : skills) {
+        ss << "• Skill: `" << s.name << "` [" << s.plugin_or_source << "]\n";
+        ss << "  Path: `" << s.path << "`\n";
+        if (!s.description.empty()) {
+            ss << "  Description: " << s.description << "\n";
+        }
+    }
+    return ss.str();
+}
+
 } // namespace razor

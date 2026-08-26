@@ -35,6 +35,9 @@ public:
     // Get a specific skill by name
     const SkillInfo* GetSkill(const std::string& skill_name);
 
+    // Format skills catalog with paths and descriptions for the orchestrator system prompt
+    std::string FormatSkillsForSystemPrompt();
+
     // Search skills matching query
     std::vector<SkillInfo> SearchSkills(const std::string& query);
 
