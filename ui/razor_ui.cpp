@@ -1627,6 +1627,17 @@ void RazorUI::Run() {
             }) | bgcolor(Color::RGB(30, 30, 30));
         }
 
+        std::string active_model_name = (selected_model_idx_.load() < (int)available_models_.size()) 
+            ? available_models_[selected_model_idx_.load()] : "Default";
+
+        Element bottom_model_badge = hbox({
+            filler(),
+            hbox({
+                text("  ") | bgcolor(Color::Cyan),
+                text(" " + active_model_name + " ") | bold | color(Color::CyanLight) | bgcolor(Color::RGB(24, 30, 36)),
+            }),
+        });
+
         Element input_area;
         bool has_text = !prompt_value_.empty();
         if (has_text || !current_steer.empty() || (duration_idle.count() < 10 && duration_scroll.count() >= 3)) {
@@ -1641,9 +1652,13 @@ void RazorUI::Run() {
             if (!matching_elements.empty()) {
                 input_rows.push_back(vbox(std::move(matching_elements)));
             }
+            input_rows.push_back(bottom_model_badge);
             input_area = vbox(std::move(input_rows));
         } else {
-            input_area = text(""); // Hidden
+            input_area = vbox({
+                border_bottom,
+                bottom_model_badge
+            });
         }
 
         if (auto_scroll_.load()) {
