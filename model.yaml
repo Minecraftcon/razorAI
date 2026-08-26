@@ -60,6 +60,27 @@ models:
   endpoint: https://integrate.api.nvidia.com/v1/chat/completions
   tools:
   - all
+- name: Mistral Nemotron
+  model: mistralai/mistral-nemotron
+  provider: nvidia
+  apiKey: ${NVIDIA_API_KEY}
+  endpoint: https://integrate.api.nvidia.com/v1/chat/completions
+  tools:
+  - all
+- name: Nemotron 3 Super 120B
+  model: nvidia/nemotron-3-super-120b-a12b
+  provider: nvidia
+  apiKey: ${NVIDIA_API_KEY}
+  endpoint: https://integrate.api.nvidia.com/v1/chat/completions
+  tools:
+  - all
+- name: Nemotron 3.5 Lightning
+  model: nvidia/nemotron-3.5-lightning-30b-a3b
+  provider: nvidia
+  apiKey: ${NVIDIA_API_KEY}
+  endpoint: https://integrate.api.nvidia.com/v1/chat/completions
+  tools:
+  - all
 - name: Gemini 3 Flash Preview
   model: gemini-3-flash-preview
   provider: gemini
