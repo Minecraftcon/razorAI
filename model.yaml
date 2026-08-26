@@ -81,6 +81,27 @@ models:
   endpoint: https://integrate.api.nvidia.com/v1/chat/completions
   tools:
   - all
+- name: GPT-OSS 20B
+  model: openai/gpt-oss-20b
+  provider: nvidia
+  apiKey: ${NVIDIA_API_KEY}
+  endpoint: https://integrate.api.nvidia.com/v1/chat/completions
+  tools:
+  - all
+- name: GPT-OSS 120B
+  model: openai/gpt-oss-120b
+  provider: nvidia
+  apiKey: ${NVIDIA_API_KEY}
+  endpoint: https://integrate.api.nvidia.com/v1/chat/completions
+  tools:
+  - all
+- name: Grok 2
+  model: grok-2-latest
+  provider: grok
+  apiKey: ${GROK_API_KEY}
+  endpoint: https://api.x.ai/v1/chat/completions
+  tools:
+  - all
 - name: Gemini 3 Flash Preview
   model: gemini-3-flash-preview
   provider: gemini
