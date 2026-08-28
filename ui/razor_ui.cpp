@@ -16,6 +16,9 @@
 #include <unordered_set>
 #include <algorithm>
 #include <cctype>
+#include <unistd.h>
+#include <filesystem>
+
 
 namespace razor {
 
@@ -65,6 +68,71 @@ static std::vector<std::string> SplitUTF8(const std::string& str) {
 static const std::vector<std::string> BRAILLE_SPINNER = {
     "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"
 };
+
+struct SelectableModelItem {
+    std::string name;
+    std::string provider;
+    std::string model;
+    int global_idx;
+};
+
+struct ModelDisplayRow {
+    bool is_header;
+    std::string title;
+    int selectable_idx; // -1 for header, else 0..selectable_models.size()-1
+};
+
+static void BuildModelPickerState(
+    const std::vector<RazorUI::ModelEntryInfo>& model_details,
+    const std::string& query,
+    std::vector<SelectableModelItem>& out_selectable,
+    std::vector<ModelDisplayRow>& out_rows
+) {
+    out_selectable.clear();
+    out_rows.clear();
+
+    std::string q_lower = query;
+    std::transform(q_lower.begin(), q_lower.end(), q_lower.begin(), ::tolower);
+
+    std::vector<SelectableModelItem> matching;
+    for (size_t i = 0; i < model_details.size(); ++i) {
+        const auto& md = model_details[i];
+        std::string n_low = md.name;
+        std::transform(n_low.begin(), n_low.end(), n_low.begin(), ::tolower);
+        std::string p_low = md.provider;
+        std::transform(p_low.begin(), p_low.end(), p_low.begin(), ::tolower);
+        std::string m_low = md.model;
+        std::transform(m_low.begin(), m_low.end(), m_low.begin(), ::tolower);
+
+        if (q_lower.empty() || n_low.find(q_lower) != std::string::npos || 
+            p_low.find(q_lower) != std::string::npos || m_low.find(q_lower) != std::string::npos) {
+            matching.push_back({md.name, md.provider, md.model, (int)i});
+        }
+    }
+
+    std::vector<std::string> provider_order;
+    std::map<std::string, std::vector<SelectableModelItem>> provider_groups;
+    for (const auto& item : matching) {
+        std::string prov = item.provider.empty() ? "General" : item.provider;
+        if (provider_groups.find(prov) == provider_groups.end()) {
+            provider_order.push_back(prov);
+        }
+        provider_groups[prov].push_back(item);
+    }
+
+    for (const auto& prov : provider_order) {
+        std::string prov_title = prov;
+        std::transform(prov_title.begin(), prov_title.end(), prov_title.begin(), ::toupper);
+        out_rows.push_back({true, prov_title, -1});
+
+        for (const auto& item : provider_groups[prov]) {
+            int sel_idx = (int)out_selectable.size();
+            out_selectable.push_back(item);
+            out_rows.push_back({false, "", sel_idx});
+        }
+    }
+}
+
 
 
 static Element ParseInline(const std::string& line) {
@@ -452,6 +520,61 @@ static Elements RenderMarkdown(const std::string& raw_text) {
         }
     };
 
+    auto build_code_block = [&](const std::string& content, const std::string& lang) -> Element {
+        Elements code_lines;
+        std::string current_line = "";
+        for (char c : content) {
+            if (c == '\n') {
+                code_lines.push_back(
+                    hbox({
+                        text("  "),
+                        SyntaxHighlight(current_line, lang),
+                        filler()
+                    })
+                );
+                current_line = "";
+            } else {
+                current_line += c;
+            }
+        }
+        if (!current_line.empty()) {
+            code_lines.push_back(
+                hbox({
+                    text("  "),
+                    SyntaxHighlight(current_line, lang),
+                    filler()
+                })
+            );
+        }
+        if (code_lines.empty()) {
+            code_lines.push_back(hbox({ text("  "), text(""), filler() }));
+        }
+
+        Elements block_elements;
+        if (!lang.empty()) {
+            std::string lang_label = lang;
+            lang_label.erase(0, lang_label.find_first_not_of(" \t\r\n"));
+            lang_label.erase(lang_label.find_last_not_of(" \t\r\n") + 1);
+            if (!lang_label.empty()) {
+                block_elements.push_back(
+                    hbox({
+                        text(" " + lang_label + " ") | bold | color(Color::RGB(180, 180, 190)) | bgcolor(Color::RGB(45, 45, 52)),
+                        filler()
+                    })
+                );
+            }
+        }
+
+        for (auto& cl : code_lines) {
+            block_elements.push_back(std::move(cl));
+        }
+
+        return vbox(std::move(block_elements))
+            | bgcolor(Color::RGB(28, 28, 32))
+            | borderLight
+            | color(Color::RGB(75, 75, 85));
+    };
+
     int pending_empty_lines = 0;
     bool in_code_block = false;
     std::string code_block_content = "";
@@ -460,24 +583,7 @@ static Elements RenderMarkdown(const std::string& raw_text) {
         if (line.substr(0, 3) == "```") {
             flush_table();
             if (in_code_block) {
-                Elements code_lines;
-                std::string current_line = "";
-                for (char c : code_block_content) {
-                    if (c == '\n') {
-                        code_lines.push_back(SyntaxHighlight(current_line, code_block_language));
-                        current_line = "";
-                    } else {
-                        current_line += c;
-                    }
-                }
-                if (!current_line.empty()) {
-                    code_lines.push_back(SyntaxHighlight(current_line, code_block_language));
-                }
-                if (code_lines.empty()) code_lines.push_back(text(""));
-                
-                vbox_lines.push_back(
-                    vbox(std::move(code_lines)) | border
-                );
+                vbox_lines.push_back(build_code_block(code_block_content, code_block_language));
                 code_block_content = "";
                 code_block_language = "";
             } else {
@@ -486,6 +592,7 @@ static Elements RenderMarkdown(const std::string& raw_text) {
             in_code_block = !in_code_block;
             continue;
         }
+
 
         if (in_code_block) {
             code_block_content += line + "\n";
@@ -916,25 +1023,9 @@ static Elements RenderMarkdown(const std::string& raw_text) {
     }
     
     if (in_code_block) {
-        Elements code_lines;
-        std::string current_line = "";
-        for (char c : code_block_content) {
-            if (c == '\n') {
-                code_lines.push_back(SyntaxHighlight(current_line, code_block_language));
-                current_line = "";
-            } else {
-                current_line += c;
-            }
-        }
-        if (!current_line.empty()) {
-            code_lines.push_back(SyntaxHighlight(current_line, code_block_language));
-        }
-        if (code_lines.empty()) code_lines.push_back(text(""));
-        
-        vbox_lines.push_back(
-            vbox(std::move(code_lines)) | border
-        );
+        vbox_lines.push_back(build_code_block(code_block_content, code_block_language));
     }
+
     
     flush_table();
     return vbox_lines;
@@ -950,6 +1041,17 @@ RazorUI::~RazorUI() {
     if (animation_thread_.joinable()) {
         animation_thread_.join();
     }
+}
+
+int RazorUI::CalculateCurrentTokens() {
+    std::lock_guard<std::mutex> lock(history_mutex_);
+    size_t total_chars = 0;
+    for (const auto& msg : history_) {
+        total_chars += msg.prompt.size();
+        total_chars += msg.reasoning.size();
+        total_chars += msg.response.size();
+    }
+    return static_cast<int>(total_chars / 3.5);
 }
 
 void RazorUI::SetSubmitCallback(PromptCallback callback) {
@@ -968,18 +1070,60 @@ bool RazorUI::IsModelThinking() const {
 void RazorUI::ProvideResponse(const std::string& response) {
     {
         std::lock_guard<std::mutex> lock(history_mutex_);
+        bool found = false;
         for (auto& msg : history_) {
             if (msg.is_loading) {
                 msg.is_loading = false;
                 msg.response = response;
+                msg.streamed_length = msg.response.size();
+                // Auto-collapse thought block once the response is ready
+                msg.reasoning_expanded = false;
+                found = true;
                 break;
             }
+        }
+        if (!found && !response.empty()) {
+            ChatMessage msg;
+            msg.is_loading = false;
+            msg.response = response;
+            msg.streamed_length = msg.response.size();
+            history_.push_back(msg);
         }
     }
 
     // Auto-dispatch queued steer if model has finished current response
     DispatchQueuedSteer();
 }
+
+
+void RazorUI::AppendStreamToken(const std::string& token) {
+    std::lock_guard<std::mutex> lock(history_mutex_);
+    for (auto& msg : history_) {
+        if (msg.is_loading) {
+            msg.response += token;
+            // Let streamed_length catch up faster during live streaming
+            if (msg.streamed_length < msg.response.size()) {
+                msg.streamed_length = msg.response.size();
+            }
+            return;
+        }
+    }
+}
+
+void RazorUI::AppendReasoningToken(const std::string& token) {
+    std::lock_guard<std::mutex> lock(history_mutex_);
+    for (auto& msg : history_) {
+        if (msg.is_loading) {
+            msg.reasoning += token;
+            // Auto-expand the thought block as soon as tokens start streaming
+            if (!msg.reasoning_expanded) {
+                msg.reasoning_expanded = true;
+            }
+            return;
+        }
+    }
+}
+
 
 void RazorUI::DispatchQueuedSteer() {
     std::string to_dispatch = "";
@@ -1205,7 +1349,40 @@ void RazorUI::Run() {
             }
         }
 
+        // Ctrl+O: Toggle thought process expansion
+        if (event == Event::Character('\x0f') || event == Event::Special("\x0f")) {
+            show_reasoning_ = !show_reasoning_.load();
+            last_keypress_ = std::chrono::steady_clock::now();
+            return true;
+        }
+
+        auto open_model_picker = [&]() {
+            std::vector<SelectableModelItem> selectable;
+            std::vector<ModelDisplayRow> display_rows;
+            BuildModelPickerState(model_details_, "", selectable, display_rows);
+            int current_sel = 0;
+            for (size_t k = 0; k < selectable.size(); ++k) {
+                if (selectable[k].global_idx == selected_model_idx_.load()) {
+                    current_sel = (int)k;
+                    break;
+                }
+            }
+            model_menu_selected_ = current_sel;
+            model_search_query_.clear();
+            show_model_picker_ = true;
+        };
+
+        // Ctrl+P / Alt+M: Open model picker modal directly
+        if (event == Event::Character('\x10') || event == Event::Special("\x10") ||
+            event == Event::Special("\x1bm") || event == Event::Special("\x1bM")) {
+            open_model_picker();
+            last_keypress_ = std::chrono::steady_clock::now();
+            return true;
+        }
+
         auto current_matches = get_autocomplete_state();
+
+
         if (!current_matches.empty()) {
             if (event == Event::ArrowUp) {
                 selected_command_index_ = std::max(0, selected_command_index_.load() - 1);
@@ -1219,6 +1396,33 @@ void RazorUI::Run() {
                 if (selected_command_index_.load() < (int)current_matches.size()) {
                     std::string chosen = current_matches[selected_command_index_.load()];
                     
+                    // Direct /model autocomplete selection: switch model immediately!
+                    if (prompt_value_.rfind("/model", 0) == 0) {
+                        auto it = std::find(available_models_.begin(), available_models_.end(), chosen);
+                        if (it != available_models_.end()) {
+                            selected_model_idx_ = std::distance(available_models_.begin(), it);
+                        } else if (selected_command_index_.load() < (int)available_models_.size()) {
+                            selected_model_idx_ = selected_command_index_.load();
+                        }
+                        
+                        std::string target_model = available_models_[selected_model_idx_.load()];
+                        std::string local_response = "Switched active model to: **" + target_model + "**";
+                        {
+                            std::lock_guard<std::mutex> lock(history_mutex_);
+                            ChatMessage msg;
+                            msg.prompt = "/model " + target_model;
+                            msg.is_loading = false;
+                            msg.response = local_response;
+                            msg.streamed_length = local_response.size();
+                            msg.model_name = "Razor System";
+                            history_.push_back(msg);
+                        }
+                        prompt_value_.clear();
+                        selected_command_index_ = 0;
+                        last_keypress_ = std::chrono::steady_clock::now();
+                        return true;
+                    }
+
                     // Check if chosen is a skill
                     const auto* sk = SkillManager::Instance().GetSkill(chosen);
                     if (sk != nullptr || prompt_value_.rfind("/skill", 0) == 0) {
@@ -1231,8 +1435,7 @@ void RazorUI::Run() {
                     
                     // If it's a command
                     if (chosen == "models" || chosen == "model") {
-                        model_menu_selected_ = selected_model_idx_.load();
-                        show_model_picker_ = true;
+                        open_model_picker();
                         prompt_value_.clear();
                         selected_command_index_ = 0;
                         return true;
@@ -1256,6 +1459,7 @@ void RazorUI::Run() {
                     }
                 }
             }
+
         }
 
         if (event == Event::Backspace || event == Event::Character('\x7f') || event == Event::Special("\x7f")) {
@@ -1313,8 +1517,7 @@ void RazorUI::Run() {
 
                     if (cmd == "models" || cmd == "model") {
                         if (arg.empty()) {
-                            model_menu_selected_ = selected_model_idx_.load();
-                            show_model_picker_ = true;
+                            open_model_picker();
                             last_keypress_ = std::chrono::steady_clock::now();
                             return true;
                         }
@@ -1529,13 +1732,19 @@ void RazorUI::Run() {
             logo_rows.push_back(hbox(std::move(row_chars)));
         }
 
-        // Single coherent logo block indented slightly to the right
-        Element header = hbox(text("    "), vbox(std::move(logo_rows)));
+        // Single coherent logo block
+        Element header = vbox(std::move(logo_rows));
+
+        bool is_startup = false;
+        {
+            std::lock_guard<std::mutex> lock(history_mutex_);
+            is_startup = history_.empty();
+        }
 
         Elements chat_elements;
-        chat_elements.push_back(top_line);
-        chat_elements.push_back(header);
-        chat_elements.push_back(text("")); // Spacing below logo
+        if (!is_startup) {
+            chat_elements.push_back(top_line);
+        }
         
         {
             std::lock_guard<std::mutex> lock(history_mutex_);
@@ -1590,12 +1799,50 @@ void RazorUI::Run() {
                     chat_elements.push_back(text(""));
                 }
 
-                if (msg.is_loading) {
-                    // Braille thinking spinner
-                    int frame = (spinner_frame_ / 2) % BRAILLE_SPINNER.size();
-                    
-                    // Smooth continuous sub-character sweep on "Thinking ..." every ~1 sec
-                    std::string t_str = "Thinking ...";
+                // 1. Thought / Reasoning Process Block (if present)
+                if (!msg.reasoning.empty()) {
+                    // reasoning_expanded: true while streaming (auto), false after done (auto).
+                    // show_reasoning_ (Ctrl+O) acts as a manual override on top.
+                    bool is_expanded = msg.reasoning_expanded || show_reasoning_.load();
+                    if (!is_expanded) {
+                        // Collapsed state: plain text in bold with no border and no bg
+                        Element thought_badge = hbox({
+                            text("▶ Thought process") | bold | color(Color::CyanLight),
+                            text("  Ctrl+O to expand") | color(Color::GrayDark)
+                        });
+                        chat_elements.push_back(hbox(text("  "), thought_badge));
+                    } else {
+                        // Expanded state: plain bold header, and process block slightly to the right with darker bg and no border
+                        Element thought_header = hbox({
+                            text("▼ Thought process") | bold | color(Color::CyanLight),
+                            text("  Ctrl+O to collapse") | color(Color::GrayDark)
+                        });
+                        chat_elements.push_back(hbox(text("  "), thought_header));
+
+                        Elements r_lines = RenderMarkdown(msg.reasoning);
+                        Elements r_box_elems;
+                        for (auto& rl : r_lines) {
+                            r_box_elems.push_back(
+                                hbox({
+                                    text("  "),
+                                    rl,
+                                    filler()
+                                })
+                            );
+                        }
+                        Element thought_content = vbox(std::move(r_box_elems))
+                            | bgcolor(Color::RGB(16, 18, 22));
+                            
+                        chat_elements.push_back(hbox(text("    "), thought_content));
+                    }
+                    chat_elements.push_back(text(""));
+                }
+
+
+                // 2. Loading indicator if waiting for response or thinking
+                if (msg.is_loading && msg.response.empty()) {
+                    int frame = (spinner_frame_.load() / 2) % 10;
+                    std::string t_str = msg.reasoning.empty() ? "Thinking ..." : "Thinking (generating response) ...";
                     Elements thinking_chars;
                     
                     // Use a float position that smoothly increments to slide the glow sub-character
@@ -1652,6 +1899,7 @@ void RazorUI::Run() {
                     }
                     chat_elements.push_back(text(""));
                 }
+
             }
         }
 
@@ -1710,16 +1958,24 @@ void RazorUI::Run() {
         
         if (!current_matches.empty()) {
             if (prompt_value_.rfind("/model", 0) == 0) {
-                matching_elements.push_back(text("Models (select or type):") | bold | color(Color::YellowLight));
+                matching_elements.push_back(text(" Models (Arrow keys to navigate, Enter to switch): ") | bold | color(Color::Black) | bgcolor(Color::White));
                 for (size_t i = 0; i < current_matches.size(); ++i) {
                     bool is_selected = (i == (size_t)selected_command_index_.load());
-                    auto col = is_selected ? Color::YellowLight : Color::Yellow;
-                    auto prefix = is_selected ? "  > " : "    ";
                     bool is_active = (i == (size_t)selected_model_idx_.load());
-                    std::string label = prefix + current_matches[i] + (is_active ? " [Active]" : "");
-                    matching_elements.push_back(text(label) | color(col));
+                    std::string prefix = is_selected ? " > " : "   ";
+                    std::string label = prefix + std::to_string(i + 1) + ". " + current_matches[i] + (is_active ? " [ACTIVE]" : "");
+                    Element item = text(label);
+                    if (is_selected) {
+                        item = item | bold | color(Color::Black) | bgcolor(Color::White);
+                    } else if (is_active) {
+                        item = item | bold | color(Color::GreenLight);
+                    } else {
+                        item = item | color(Color::White);
+                    }
+                    matching_elements.push_back(item);
                 }
             } else {
+
                 matching_elements.push_back(text("Suggestions (Arrow keys to navigate, Enter/Tab to select):") | bold | color(Color::CyanLight));
                 size_t limit = std::min(current_matches.size(), (size_t)12);
                 for (size_t i = 0; i < limit; ++i) {
@@ -1761,86 +2017,241 @@ void RazorUI::Run() {
         std::string active_model_name = (selected_model_idx_.load() < (int)available_models_.size()) 
             ? available_models_[selected_model_idx_.load()] : "Default";
 
-        Element bottom_model_badge = hbox({
+        std::string cwd_display = "";
+        char cwd_buf[1024];
+        if (getcwd(cwd_buf, sizeof(cwd_buf)) != nullptr) {
+            cwd_display = cwd_buf;
+        }
+        if (cwd_display.empty()) {
+            cwd_display = "/";
+        }
+
+        int current_tokens = CalculateCurrentTokens();
+        int max_tokens = 32768; // default fallback
+        if (model_context_limits_.count(active_model_name)) {
+            max_tokens = model_context_limits_[active_model_name];
+        }
+
+        auto FormatTokens = [](int tokens) -> std::string {
+            if (tokens >= 1000000) {
+                char buf[32];
+                snprintf(buf, sizeof(buf), "%.2fM", tokens / 1000000.0);
+                return std::string(buf);
+            } else if (tokens >= 1000) {
+                char buf[32];
+                snprintf(buf, sizeof(buf), "%.1fK", tokens / 1000.0);
+                return std::string(buf);
+            }
+            return std::to_string(tokens);
+        };
+
+        std::string current_tok_str = FormatTokens(current_tokens);
+        std::string max_tok_str = FormatTokens(max_tokens);
+
+        float fill_ratio = max_tokens > 0 ? (float)current_tokens / max_tokens : 0.0f;
+        Color token_color = Color::GreenLight;
+        if (fill_ratio > 0.85f) {
+            token_color = Color::RedLight;
+        } else if (fill_ratio > 0.60f) {
+            token_color = Color::YellowLight;
+        }
+
+        Element token_display = hbox({
+            text(" " + current_tok_str) | color(token_color),
+            text("/[ "),
+            text(max_tok_str) | bold | color(Color::RGB(150, 150, 150)),
+            text(" ] "),
+        }) | bgcolor(Color::RGB(30, 30, 30));
+
+        Element bottom_bar = hbox({
+            text(" " + cwd_display) | color(Color::RGB(100, 115, 135)),
             filler(),
+            token_display,
             hbox({
                 text("  ") | bgcolor(Color::Cyan),
                 text(" " + active_model_name + " ") | bold | color(Color::CyanLight) | bgcolor(Color::RGB(24, 30, 36)),
             }),
         });
 
-        Element input_area;
-        bool has_text = !prompt_value_.empty() || !active_skill_name_.empty();
-        if (has_text || !current_steer.empty() || (duration_idle.count() < 10 && duration_scroll.count() >= 3)) {
-            Elements input_rows;
-            input_rows.push_back(border_top);
+        Element main_view;
+        if (is_startup) {
+            // =========================================================================
+            // STARTUP MODE: Razor Logo centered with the input box directly underneath
+            // =========================================================================
+            Elements startup_box_elements;
+            startup_box_elements.push_back(header | center);
+            startup_box_elements.push_back(text("")); // Spacing
+            startup_box_elements.push_back(border_top);
             if (!current_steer.empty()) {
-                input_rows.push_back(steer_banner);
-                input_rows.push_back(separatorLight() | color(Color::GrayDark));
+                startup_box_elements.push_back(steer_banner);
+                startup_box_elements.push_back(separatorLight() | color(Color::GrayDark));
             }
-            input_rows.push_back(input_row);
-            input_rows.push_back(border_bottom);
+            startup_box_elements.push_back(input_row);
+            startup_box_elements.push_back(border_bottom);
             if (!matching_elements.empty()) {
-                input_rows.push_back(vbox(std::move(matching_elements)));
+                startup_box_elements.push_back(vbox(std::move(matching_elements)));
             }
-            input_rows.push_back(bottom_model_badge);
-            input_area = vbox(std::move(input_rows));
-        } else {
-            input_area = vbox({
-                border_bottom,
-                bottom_model_badge
+            startup_box_elements.push_back(bottom_bar);
+
+            Element startup_card = vbox(std::move(startup_box_elements)) 
+                | size(WIDTH, GREATER_THAN, 64) 
+                | size(WIDTH, LESS_THAN, 95) 
+                | center;
+
+            main_view = vbox({
+                top_line,
+                filler(),
+                startup_card,
+                filler()
             });
-        }
-
-        if (auto_scroll_.load()) {
-            scroll_index_ = std::max(0, (int)chat_elements.size() - 1);
         } else {
-            scroll_index_ = std::min(std::max(0, scroll_index_.load()), (int)chat_elements.size() - 1);
+            // =========================================================================
+            // CONVERSATION MODE: Chat history flows from top, input box stays at bottom
+            // =========================================================================
+            Element input_area;
+            bool has_text = !prompt_value_.empty() || !active_skill_name_.empty();
+            if (has_text || !current_steer.empty() || (duration_idle.count() < 10 && duration_scroll.count() >= 3)) {
+                Elements input_rows;
+                input_rows.push_back(border_top);
+                if (!current_steer.empty()) {
+                    input_rows.push_back(steer_banner);
+                    input_rows.push_back(separatorLight() | color(Color::GrayDark));
+                }
+                input_rows.push_back(input_row);
+                input_rows.push_back(border_bottom);
+                if (!matching_elements.empty()) {
+                    input_rows.push_back(vbox(std::move(matching_elements)));
+                }
+                input_rows.push_back(bottom_bar);
+                input_area = vbox(std::move(input_rows));
+            } else {
+                input_area = vbox({
+                    border_bottom,
+                    bottom_bar
+                });
+            }
+
+
+            if (auto_scroll_.load()) {
+                scroll_index_ = std::max(0, (int)chat_elements.size() - 1);
+            } else {
+                scroll_index_ = std::min(std::max(0, scroll_index_.load()), (int)chat_elements.size() - 1);
+            }
+
+            if (scroll_index_ >= 0 && scroll_index_ < chat_elements.size()) {
+                chat_elements[scroll_index_] = chat_elements[scroll_index_] | focus;
+            }
+
+            main_view = vbox(
+                vbox(std::move(chat_elements)) | vscroll_indicator | yframe | flex,
+                input_area
+            );
         }
 
-        if (scroll_index_ >= 0 && scroll_index_ < chat_elements.size()) {
-            chat_elements[scroll_index_] = chat_elements[scroll_index_] | focus;
-        }
-
-        Element main_view = vbox(
-            vbox(std::move(chat_elements)) | vscroll_indicator | yframe | flex,
-            input_area
-        );
         
         if (show_model_picker_.load()) {
-            Elements model_items;
-            for (size_t i = 0; i < available_models_.size(); ++i) {
-                bool is_highlighted = ((int)i == model_menu_selected_);
-                bool is_active = ((int)i == selected_model_idx_.load());
-                
-                std::string prefix = is_highlighted ? "  > " : "    ";
-                std::string label = prefix + std::to_string(i + 1) + ". " + available_models_[i];
-                if (is_active) {
-                    label += "  [ACTIVE]";
-                }
-                
-                Element item = text(label);
-                if (is_highlighted) {
-                    item = item | bold | color(Color::Black) | bgcolor(Color::Yellow);
-                } else if (is_active) {
-                    item = item | bold | color(Color::GreenLight);
-                } else {
-                    item = item | color(Color::White);
-                }
-                model_items.push_back(item);
+            std::vector<SelectableModelItem> selectable;
+            std::vector<ModelDisplayRow> display_rows;
+            BuildModelPickerState(model_details_, model_search_query_, selectable, display_rows);
+
+            if (model_menu_selected_ >= (int)selectable.size()) {
+                model_menu_selected_ = std::max(0, (int)selectable.size() - 1);
             }
 
-            Element picker_box = vbox({
-                text(" SELECT ACTIVE MODEL ") | bold | color(Color::Black) | bgcolor(Color::Yellow) | center,
-                separatorLight() | color(Color::GrayDark),
-                vbox(std::move(model_items)),
-                separatorLight() | color(Color::GrayDark),
-                text("Up/Down to navigate  •  Enter to select  •  Esc to cancel") | color(Color::GrayLight) | center
-            }) | borderRounded | bgcolor(Color::RGB(18, 18, 18)) | size(WIDTH, GREATER_THAN, 64);
+            int target_row_idx = 0;
+            for (size_t r = 0; r < display_rows.size(); ++r) {
+                if (!display_rows[r].is_header && display_rows[r].selectable_idx == model_menu_selected_) {
+                    target_row_idx = (int)r;
+                    break;
+                }
+            }
+
+            int visible_rows = 10;
+            int start_row = 0;
+            if ((int)display_rows.size() > visible_rows) {
+                start_row = std::max(0, target_row_idx - visible_rows / 2);
+                if (start_row + visible_rows > (int)display_rows.size()) {
+                    start_row = (int)display_rows.size() - visible_rows;
+                }
+            }
+            int end_row = std::min((int)display_rows.size(), start_row + visible_rows);
+
+            Elements model_items;
+            if (selectable.empty()) {
+                model_items.push_back(text("  No models matching '" + model_search_query_ + "'") | color(Color::GrayDark));
+            } else {
+                for (int r = start_row; r < end_row; ++r) {
+                    const auto& row = display_rows[r];
+                    if (row.is_header) {
+                        model_items.push_back(
+                            hbox({
+                                text(row.title) | bold | color(Color::RGB(135, 160, 200)),
+                                text(" ") | color(Color::RGB(50, 60, 75)) | flex,
+                            })
+                        );
+                    } else {
+                        const auto& item = selectable[row.selectable_idx];
+                        bool is_highlighted = (row.selectable_idx == model_menu_selected_);
+                        bool is_active = (item.global_idx == selected_model_idx_.load());
+
+                        std::string prefix = is_highlighted ? " > " : "   ";
+                        std::string label = prefix + item.name;
+                        if (is_active) {
+                            label += "  [ACTIVE]";
+                        }
+
+                        Element line_el = text(label);
+                        if (is_highlighted) {
+                            line_el = line_el | bold | color(Color::Black) | bgcolor(Color::White);
+                        } else if (is_active) {
+                            line_el = line_el | bold | color(Color::GreenLight);
+                        } else {
+                            line_el = line_el | color(Color::RGB(220, 225, 235));
+                        }
+                        model_items.push_back(line_el);
+                    }
+                }
+            }
+
+            std::string counter_text = "Models: " + std::to_string(selectable.size()) + " total";
+            if (!selectable.empty()) {
+                counter_text += " (" + std::to_string(model_menu_selected_ + 1) + "/" + std::to_string(selectable.size()) + ")";
+            }
+
+            Elements picker_elements;
+            picker_elements.push_back(
+                hbox({
+                    text("Search models") | bold | color(Color::White),
+                    filler(),
+                    text(counter_text) | color(Color::RGB(110, 125, 145)),
+                })
+            );
+            picker_elements.push_back(
+                hbox({
+                    text("Query: ") | bold | color(Color::CyanLight),
+                    text(model_search_query_) | bold | color(Color::White),
+                    text("▎") | color(Color::Cyan)
+                })
+            );
+            picker_elements.push_back(text("")); // Spacing
+            picker_elements.push_back(vbox(std::move(model_items)) | size(HEIGHT, EQUAL, 10));
+            picker_elements.push_back(text("")); // Spacing
+            picker_elements.push_back(
+                text("↑/↓/PgUp/PgDn: Navigate • Type: Filter • Enter: Select • Esc: Cancel") | color(Color::RGB(110, 125, 145)) | center
+            );
+
+            Element picker_box = vbox(std::move(picker_elements))
+                | bgcolor(Color::RGB(40, 44, 52)) // Grayish dark theme
+                | size(WIDTH, GREATER_THAN, 68)
+                | size(WIDTH, LESS_THAN, 88);
 
             Element picker_view = picker_box | clear_under | center;
-            return dbox({main_view, picker_view});
+            Element faded_main = main_view | dim;
+            return dbox({faded_main, picker_view}) | bgcolor(Color::RGB(12, 13, 16));
         }
+
+
+
 
         if (show_skill_picker_.load()) {
             auto all_skills = SkillManager::Instance().DiscoverSkills();
@@ -1928,16 +2339,22 @@ void RazorUI::Run() {
             }) | borderRounded | bgcolor(Color::RGB(18, 18, 18)) | size(WIDTH, GREATER_THAN, 80);
 
             Element picker_view = picker_box | clear_under | center;
-            return dbox({main_view, picker_view});
+            Element faded_main = main_view | dim;
+            return dbox({faded_main, picker_view}) | bgcolor(Color::RGB(12, 13, 16));
         }
 
-        return main_view;
+        return main_view | bgcolor(Color::RGB(16, 17, 20));
     });
 
     auto main_component = CatchEvent(renderer, [&](Event event) {
         if (show_model_picker_.load()) {
-            if (event == Event::Escape || event == Event::Character('q') || event == Event::Character('Q')) {
+            std::vector<SelectableModelItem> selectable;
+            std::vector<ModelDisplayRow> display_rows;
+            BuildModelPickerState(model_details_, model_search_query_, selectable, display_rows);
+
+            if (event == Event::Escape || event == Event::Character('\x1b')) {
                 show_model_picker_ = false;
+                model_search_query_.clear();
                 last_keypress_ = std::chrono::steady_clock::now();
                 return true;
             }
@@ -1947,30 +2364,62 @@ void RazorUI::Run() {
                 return true;
             }
             if (event == Event::ArrowDown) {
-                model_menu_selected_ = std::min((int)available_models_.size() - 1, model_menu_selected_ + 1);
+                model_menu_selected_ = std::min((int)selectable.size() - 1, model_menu_selected_ + 1);
                 last_keypress_ = std::chrono::steady_clock::now();
                 return true;
             }
+            if (event == Event::PageUp) {
+                model_menu_selected_ = std::max(0, model_menu_selected_ - 5);
+                last_keypress_ = std::chrono::steady_clock::now();
+                return true;
+            }
+            if (event == Event::PageDown) {
+                model_menu_selected_ = std::min((int)selectable.size() - 1, model_menu_selected_ + 5);
+                last_keypress_ = std::chrono::steady_clock::now();
+                return true;
+            }
+
             if (event == Event::Return) {
-                selected_model_idx_ = model_menu_selected_;
-                show_model_picker_ = false;
-                std::string chosen_model = (selected_model_idx_.load() < (int)available_models_.size()) 
-                    ? available_models_[selected_model_idx_.load()] : "Default";
-                {
-                    std::lock_guard<std::mutex> lock(history_mutex_);
-                    ChatMessage msg;
-                    msg.prompt = "/model " + chosen_model;
-                    msg.response = "Switched active model to: **" + chosen_model + "**";
-                    msg.model_name = "Razor System";
-                    msg.is_loading = false;
-                    msg.streamed_length = msg.response.size();
-                    history_.push_back(msg);
+                if (!selectable.empty() && model_menu_selected_ >= 0 && model_menu_selected_ < (int)selectable.size()) {
+                    selected_model_idx_ = selectable[model_menu_selected_].global_idx;
+                    show_model_picker_ = false;
+                    model_search_query_.clear();
+                    std::string chosen_model = (selected_model_idx_.load() < (int)available_models_.size()) 
+                        ? available_models_[selected_model_idx_.load()] : "Default";
+                    {
+                        std::lock_guard<std::mutex> lock(history_mutex_);
+                        ChatMessage msg;
+                        msg.prompt = "/model " + chosen_model;
+                        msg.response = "Switched active model to: **" + chosen_model + "**";
+                        msg.model_name = "Razor System";
+                        msg.is_loading = false;
+                        msg.streamed_length = msg.response.size();
+                        history_.push_back(msg);
+                    }
+                } else {
+                    show_model_picker_ = false;
+                    model_search_query_.clear();
                 }
+                last_keypress_ = std::chrono::steady_clock::now();
+                return true;
+            }
+            if (event == Event::Backspace || event == Event::Character('\x7f') || event == Event::Special("\x7f")) {
+                if (!model_search_query_.empty()) {
+                    model_search_query_.pop_back();
+                    model_menu_selected_ = 0;
+                    last_keypress_ = std::chrono::steady_clock::now();
+                }
+                return true;
+            }
+            if (event.is_character() && event.character() != "\n" && event.character() != "\r") {
+                model_search_query_ += event.character();
+                model_menu_selected_ = 0;
                 last_keypress_ = std::chrono::steady_clock::now();
                 return true;
             }
             return true;
         }
+
 
         if (show_skill_picker_.load()) {
             auto all_skills = SkillManager::Instance().DiscoverSkills();

@@ -8,6 +8,7 @@
 #include <mutex>
 #include <string>
 #include <functional>
+#include <map>
 
 namespace razor {
 
@@ -15,8 +16,10 @@ using PromptCallback = std::function<void(const std::string&)>;
 
 struct ChatMessage {
     std::string prompt;
+    std::string reasoning;
     std::string response;
     bool is_loading = false;
+    bool reasoning_expanded = false;  // auto-expanded while streaming, collapsed on completion
     size_t streamed_length = 0;
     std::chrono::steady_clock::time_point start_time;
     std::string model_name;
@@ -31,11 +34,21 @@ public:
     void SetUserName(const std::string& user_name);
     void Run();
 
+    void SetModelContextLimits(const std::map<std::string, int>& limits) { model_context_limits_ = limits; }
+    int CalculateCurrentTokens();
+
     // Call this to update the latest response (simulates streaming)
     void ProvideResponse(const std::string& response);
     
+    // Append a single streamed token to the current loading message (true streaming)
+    void AppendStreamToken(const std::string& token);
+
+    // Append a single reasoning/thought token to the current loading message
+    void AppendReasoningToken(const std::string& token);
+    
     // Starts a new thinking indicator with a timer
     void StartThinking(const std::string& model_name);
+
     
     // Updates the model name of the currently loading message
     void UpdateModelName(const std::string& model_name);
@@ -45,11 +58,26 @@ public:
     void SetSessionId(const std::string& sid) { current_session_id_ = sid; }
     std::string GetSessionId() const { return current_session_id_; }
 
+    struct ModelEntryInfo {
+        std::string name;
+        std::string provider;
+        std::string model;
+    };
+
     void SetAvailableModels(const std::vector<std::string>& models) { available_models_ = models; }
+    const std::vector<std::string>& GetAvailableModels() const { return available_models_; }
+    void SetModelDetails(const std::vector<ModelEntryInfo>& details) {
+        model_details_ = details;
+        available_models_.clear();
+        for (const auto& m : details) {
+            available_models_.push_back(m.name);
+        }
+    }
     int GetSelectedModelIndex() const { return selected_model_idx_.load(); }
 
     bool IsModelThinking() const;
     void DispatchQueuedSteer();
+
 
 private:
     void Render();
@@ -65,6 +93,7 @@ private:
 
     std::vector<ChatMessage> history_;
     std::mutex history_mutex_;
+    std::map<std::string, int> model_context_limits_;
 
     std::atomic<bool> is_running_;
     std::thread animation_thread_;
@@ -80,10 +109,14 @@ private:
     std::atomic<int> selected_command_index_;
 
     // Model Picker State
+    std::vector<ModelEntryInfo> model_details_;
+    std::string model_search_query_ = "";
     std::atomic<bool> show_model_picker_{false};
     std::vector<std::string> available_models_;
     std::atomic<int> selected_model_idx_{0};
     int model_menu_selected_ = 0;
+
+
 
     // Skill Picker State
     std::atomic<bool> show_skill_picker_{false};
@@ -96,6 +129,8 @@ private:
     int paste_line_count_ = 0;
     std::atomic<int> rapid_char_count_{0};
     std::atomic<bool> is_pasting_{false};
+    std::atomic<bool> show_reasoning_{false};
+
 };
 
 } // namespace razor

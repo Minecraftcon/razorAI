@@ -32,8 +32,11 @@ struct Config {
     std::vector<EmbeddingEntry> embeddings;
 
     static std::string ExpandEnvVar(const std::string& value);
-    static Config LoadConfig(const std::string& path);
+    static std::string GetDefaultConfigPath();
+    static std::string ResolveConfigPath(const std::string& requested_path = "");
+    static Config LoadConfig(const std::string& path = "");
 };
+
 
 } // namespace razor
 

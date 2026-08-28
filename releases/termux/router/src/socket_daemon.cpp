@@ -19,13 +19,24 @@
 #include <chrono>
 #include <shared_mutex>
 #include <algorithm>
+#include <map>
+#include <thread>
 #include "http_client.hpp"
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
 namespace razor {
 
-
+static bool WriteAll(int fd, const std::string& data) {
+    if (fd < 0) return false;
+    size_t sent = 0;
+    while (sent < data.size()) {
+        ssize_t n = write(fd, data.data() + sent, data.size() - sent);
+        if (n <= 0) return false;
+        sent += static_cast<size_t>(n);
+    }
+    return true;
+}
 
 static std::string EscapeJson(const std::string& str) {
     std::ostringstream ss;
@@ -73,6 +84,7 @@ SocketDaemon::SocketDaemon(const SocketConfig& config)
     if (socket_config_.socket_path.empty()) {
         socket_config_.socket_path = GetDefaultSocketPath();
     }
+    socket_config_.config_path = Config::ResolveConfigPath(socket_config_.config_path);
     model_config_ = Config::LoadConfig(socket_config_.config_path);
 }
 
@@ -84,9 +96,11 @@ bool SocketDaemon::Start() {
     if (is_running_) return true;
 
     // Reload model configuration on start
+    socket_config_.config_path = Config::ResolveConfigPath(socket_config_.config_path);
     model_config_ = Config::LoadConfig(socket_config_.config_path);
 
     is_running_ = true;
+
 
     // Start Unix socket listener thread
     unix_listener_thread_ = std::thread(&SocketDaemon::ListenUnixSocket, this);
@@ -562,63 +576,123 @@ std::string SocketDaemon::ProcessRequestJson(const std::string& request_json, in
             payload["tool_choice"] = "auto";
         }
 
-        std::string payload_str = payload.dump();
-        LogMessage("INFO", "Payload Sent to API: " + payload_str);
-        
-        std::string api_response = HttpClient::Post(endpoint, api_key, payload_str, 60);
-        
-        if (api_response.empty()) {
-            response_text = "[Router Output] API call failed: No response received from " + model_name + " endpoint (" + endpoint + "). Please verify your network and API key.";
-        } else {
-            try {
-                json resp_json = json::parse(api_response);
-                if (resp_json.contains("choices") && !resp_json["choices"].empty()) {
-                    auto& message = resp_json["choices"][0]["message"];
-                    std::string text_content = "";
-                    if (message.contains("content") && !message["content"].is_null() && message["content"].is_string()) {
-                        text_content = message["content"].get<std::string>();
-                    }
+        // Enable SSE streaming for text responses
+        payload["stream"] = true;
 
-                    if (message.contains("tool_calls") && !message["tool_calls"].empty()) {
-                        // Extract tool calls and normalize
-                        json normalized_calls = json::array();
-                        for (auto& tc : message["tool_calls"]) {
-                            json norm;
-                            norm["tool"] = tc["function"]["name"];
-                            norm["tool_call_id"] = tc.value("id", "");
-                            if (tc.contains("function") && tc["function"].contains("arguments")) {
-                                try {
-                                    norm["args"] = json::parse(tc["function"]["arguments"].get<std::string>());
-                                } catch (...) {
-                                    norm["args"] = json::object();
-                                }
-                            } else {
-                                norm["args"] = json::object();
-                            }
-                            normalized_calls.push_back(norm);
-                        }
-                        
-                        if (!text_content.empty()) {
-                            json combined;
-                            combined["content"] = text_content;
-                            combined["tool_calls"] = normalized_calls;
-                            response_text = combined.dump();
-                        } else {
-                            response_text = normalized_calls.dump();
-                        }
-                    } else if (!text_content.empty()) {
-                        response_text = text_content;
-                    } else {
-                        response_text = "[Router Output] API returned empty content.";
-                    }
-                } else {
-                    response_text = "[Router Output] API call failed: " + api_response;
+        std::string payload_str = payload.dump();
+        LogMessage("INFO", "Payload Sent to API (streaming): " + payload_str.substr(0, 200));
+
+        // Accumulators for streaming
+        std::string streamed_reasoning;
+        std::string streamed_content;
+        std::string tool_calls_raw;       // raw SSE tool_calls delta chunks (accumulated JSON)
+        bool got_tool_calls_signal = false;
+        std::string raw_api_body;
+
+        // Accumulated partial tool call args per index
+        std::map<int, std::string> tc_arg_chunks;
+        std::map<int, std::string> tc_names;
+        std::map<int, std::string> tc_ids;
+
+        raw_api_body = HttpClient::PostStream(endpoint, api_key, payload_str, [&](const std::string& sse_data) {
+            try {
+                json chunk = json::parse(sse_data);
+                if (!chunk.contains("choices") || chunk["choices"].empty()) return;
+
+                auto& choice = chunk["choices"][0];
+                std::string finish_reason = "";
+                if (choice.contains("finish_reason") && !choice["finish_reason"].is_null()) {
+                    finish_reason = choice["finish_reason"].get<std::string>();
+                    if (finish_reason == "tool_calls") got_tool_calls_signal = true;
                 }
-            } catch (...) {
-                response_text = "[Router Output] JSON Parsing failed. Raw: " + api_response;
+
+                if (!choice.contains("delta")) return;
+                auto& delta = choice["delta"];
+
+                // Stream reasoning / thinking tokens separately
+                std::string r_tok = "";
+                if (delta.contains("reasoning_content") && delta["reasoning_content"].is_string() && !delta["reasoning_content"].get<std::string>().empty()) {
+                    r_tok = delta["reasoning_content"].get<std::string>();
+                } else if (delta.contains("reasoning") && delta["reasoning"].is_string() && !delta["reasoning"].get<std::string>().empty()) {
+                    r_tok = delta["reasoning"].get<std::string>();
+                } else if (delta.contains("thought") && delta["thought"].is_string() && !delta["thought"].get<std::string>().empty()) {
+                    r_tok = delta["thought"].get<std::string>();
+                }
+
+                if (!r_tok.empty()) {
+                    streamed_reasoning += r_tok;
+                    json sc;
+                    sc["status"] = "reasoning_chunk";
+                    sc["token"] = r_tok;
+                    std::string sc_line = sc.dump() + "\n";
+                    WriteAll(client_fd, sc_line);
+                }
+
+                // Stream normal answer content
+                if (delta.contains("content") && delta["content"].is_string() && !delta["content"].get<std::string>().empty()) {
+                    std::string c_tok = delta["content"].get<std::string>();
+                    streamed_content += c_tok;
+                    json sc;
+                    sc["status"] = "stream_chunk";
+                    sc["token"] = c_tok;
+                    std::string sc_line = sc.dump() + "\n";
+                    WriteAll(client_fd, sc_line);
+                }
+
+                // Accumulate tool call deltas
+                if (delta.contains("tool_calls") && delta["tool_calls"].is_array()) {
+                    got_tool_calls_signal = true;
+                    for (auto& tc_delta : delta["tool_calls"]) {
+                        int idx = tc_delta.value("index", 0);
+                        if (tc_delta.contains("id")) tc_ids[idx] = tc_delta["id"].get<std::string>();
+                        if (tc_delta.contains("function")) {
+                            if (tc_delta["function"].contains("name"))
+                                tc_names[idx] = tc_delta["function"]["name"].get<std::string>();
+                            if (tc_delta["function"].contains("arguments"))
+                                tc_arg_chunks[idx] += tc_delta["function"]["arguments"].get<std::string>();
+                        }
+                    }
+                }
+            } catch (...) {}
+        }, 60);
+
+        // ─── Parse full response after streaming ends ─────────────────────
+        if (got_tool_calls_signal && !tc_names.empty()) {
+            // Reassemble tool calls from streaming deltas
+            json normalized_calls = json::array();
+            for (auto& [idx, name] : tc_names) {
+                json norm;
+                norm["tool"] = name;
+                norm["tool_call_id"] = tc_ids.count(idx) ? tc_ids.at(idx) : "";
+                try {
+                    norm["args"] = json::parse(tc_arg_chunks.count(idx) ? tc_arg_chunks.at(idx) : "{}");
+                } catch (...) {
+                    norm["args"] = json::object();
+                }
+                normalized_calls.push_back(norm);
             }
+            if (!streamed_content.empty()) {
+                json combined;
+                combined["content"] = streamed_content;
+                combined["tool_calls"] = normalized_calls;
+                response_text = combined.dump();
+            } else {
+                response_text = normalized_calls.dump();
+            }
+        } else if (!streamed_content.empty()) {
+            response_text = streamed_content;
+        } else if (!streamed_reasoning.empty()) {
+            response_text = streamed_reasoning;
+        } else {
+            response_text = "[Router Output] API call failed or returned empty content from " + model_name + ".";
         }
-        
+
+        if ((response_text.find("[Router Output]") != std::string::npos || response_text.empty()) && !raw_api_body.empty()) {
+            LogMessage("INFO", "Raw API body for model " + model_id + " | body_len=" + std::to_string(raw_api_body.size()) + " | body=\n" + raw_api_body);
+        }
+
+
+
         if (response_text.find("[Router Output]") != std::string::npos) {
             LogMessage("ERROR", "API call failed for model: " + model_id);
         } else {
@@ -679,9 +753,7 @@ void SocketDaemon::HandleClientConnection(int client_fd) {
     
     if (!request_str.empty()) {
         std::string response_json = ProcessRequestJson(request_str, client_fd);
-        write(client_fd, response_json.c_str(), response_json.size());
-        // Write newline as delimiter
-        write(client_fd, "\n", 1);
+        WriteAll(client_fd, response_json + "\n");
     }
     close(client_fd);
 }

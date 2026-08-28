@@ -16,13 +16,11 @@ int main(int argc, char* argv[]) {
     std::signal(SIGTERM, SignalHandler);
     std::signal(SIGPIPE, SIG_IGN); // Prevent crash if client disconnects before write()
 
-    std::string config_path = "model.yaml";
-    if (argc > 1) {
-        config_path = argv[1];
-    }
+    std::string config_path = (argc > 1) ? argv[1] : razor::Config::ResolveConfigPath();
 
     razor::SocketConfig cfg;
     cfg.config_path = config_path;
+
 
     std::cout << "========================================================\n";
     std::cout << "          RazorAI Model Router Daemon                   \n";

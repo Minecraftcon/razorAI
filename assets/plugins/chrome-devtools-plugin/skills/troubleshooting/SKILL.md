@@ -81,6 +81,10 @@ _If you are unsure of the user's configuration, ask the user to provide their cu
 If the issue is still unclear, run diagnostic commands to test the server directly:
 
 - Run `npx chrome-devtools-mcp@latest --help` to verify the installation and Node.js environment.
+- If Chrome cannot be found automatically, verify the browser executable path using this one-liner:
+  `command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser || command -v chrome`
+  (Other possible names: `google-chrome-beta`, `google-chrome-dev`, `chr`).
+  If found, guide the user to add `--executablePath=/path/to/chrome` to their MCP config.
 - If you need more information, run `DEBUG=* npx chrome-devtools-mcp@latest --logFile=/tmp/cdm-test.log` to capture verbose logs. Analyze the output for errors.
 
 ### Step 6: Check GitHub for Existing Issues

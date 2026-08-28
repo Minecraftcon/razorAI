@@ -62,7 +62,7 @@ std::string ExecuteCommandAndCapture(const std::string& cmd, int& exit_code) {
     return result;
 }
 
-std::string SendToDaemonSync(const std::string& prompt, razor::RazorUI* ui = nullptr, int model_index = 0, int timeout_secs = 10, const std::string& session_id = "") {
+std::string SendToDaemonSync(const std::string& prompt, razor::RazorUI* ui = nullptr, int model_index = 0, int timeout_secs = 120, const std::string& session_id = "") {
     int sock = socket(AF_UNIX, SOCK_STREAM, 0);
     if (sock < 0) return "{\"response\": \"Failed to create socket.\"}";
     
@@ -92,10 +92,14 @@ std::string SendToDaemonSync(const std::string& prompt, razor::RazorUI* ui = nul
     // Signal EOF to the server so its read loop terminates
     shutdown(sock, SHUT_WR);
     
+    if (timeout_secs <= 0) {
+        timeout_secs = 90;
+    }
     struct timeval tv;
-    tv.tv_sec = timeout_secs; // 0 means block indefinitely
+    tv.tv_sec = timeout_secs;
     tv.tv_usec = 0;
     setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
+
     
     char buffer[8192];
     std::string full_response;
@@ -112,9 +116,31 @@ std::string SendToDaemonSync(const std::string& prompt, razor::RazorUI* ui = nul
             
             try {
                 json j = json::parse(line);
-                if (j.contains("status") && j["status"] == "handover") {
-                    if (ui) ui->UpdateModelName(j["model"].get<std::string>());
+                if (j.contains("status")) {
+                    std::string status = j["status"].get<std::string>();
+                    if (status == "handover") {
+                        // Model handover — update model name in UI header
+                        if (ui && j.contains("model")) {
+                            ui->UpdateModelName(j["model"].get<std::string>());
+                        }
+                    } else if (status == "reasoning_chunk") {
+                        // Live reasoning / thought token — append to thought process immediately
+                        if (ui && j.contains("token")) {
+                            ui->AppendReasoningToken(j["token"].get<std::string>());
+                        }
+                    } else if (status == "stream_chunk") {
+                        // Live streaming token — append to UI immediately
+                        if (ui && j.contains("token")) {
+                            ui->AppendStreamToken(j["token"].get<std::string>());
+                        }
+                    } else {
+
+                        // Final response envelope
+                        close(sock);
+                        return line;
+                    }
                 } else {
+                    // Plain response without status field (legacy fallback)
                     close(sock);
                     return line;
                 }
@@ -128,6 +154,7 @@ std::string SendToDaemonSync(const std::string& prompt, razor::RazorUI* ui = nul
     if (full_response.empty()) return "{\"response\": \"Empty response from daemon.\"}";
     return full_response;
 }
+
 
 void ProcessAndExecute(razor::RazorUI& ui, std::string api_response) {
     bool is_tool_call = false;
@@ -466,11 +493,12 @@ void ProcessAndExecute(razor::RazorUI& ui, std::string api_response) {
 #include "config.hpp"
 
 int main() {
-    std::string config_path = "model.yaml";
+    std::string config_path = razor::Config::ResolveConfigPath();
     razor::Config cfg = razor::Config::LoadConfig(config_path);
 
     razor::SocketConfig daemon_cfg;
     daemon_cfg.config_path = config_path;
+
     
     // Fuse MCP server / Socket daemon directly into UI process
     razor::SocketDaemon daemon(daemon_cfg);
@@ -478,7 +506,10 @@ int main() {
     std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Allow daemon socket initialization
 
     razor::RazorUI ui;
+    auto start_ts = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    ui.SetSessionId("session_" + std::to_string(start_ts));
     ui.SetUserName(cfg.user_name.empty() ? "Shado" : cfg.user_name);
+
     
     std::vector<std::string> model_names;
     for (const auto& m : cfg.models) {

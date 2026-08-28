@@ -1,5 +1,16 @@
-PREFIX ?= $(if $(TERMUX_VERSION),/data/data/com.termux/files/usr,$(if $(shell [ $$(id -u) -eq 0 ] 2>/dev/null && echo 1),/usr/local,$(HOME)/.local))
+# Detect Termux vs Standard Linux prefix
+IS_TERMUX := $(shell if [ -n "$$TERMUX_VERSION" ] || [ -d "/data/data/com.termux/files/usr" ]; then echo 1; else echo 0; fi)
+ifeq ($(IS_TERMUX),1)
+  PREFIX ?= /data/data/com.termux/files/usr
+else ifeq ($(shell [ $$(id -u) -eq 0 ] 2>/dev/null && echo 1),1)
+  PREFIX ?= /usr/local
+else
+  PREFIX ?= $(HOME)/.local
+endif
+
 BINDIR ?= $(PREFIX)/bin
+RAZOR_HOME ?= $(HOME)/.razor
+
 
 .PHONY: all help build test test-router test-go test-valgrind demo clean run run-ui run-daemon package-skills install uninstall package-termux
 
@@ -10,7 +21,7 @@ help:
 	@echo ""
 	@echo "Available targets:"
 	@echo "  build             - Build all C++ libraries, daemons, and UI targets"
-	@echo "  install           - Install 'razor' executable to $(BINDIR) and sync ~/.razor/skills"
+	@echo "  install           - Install 'razor' executable to $(BINDIR) and sync $(RAZOR_HOME)/skills and model.yaml"
 	@echo "  uninstall         - Remove 'razor' from $(BINDIR)"
 	@echo "  package-skills    - Package all active skills & plugins into assets/"
 	@echo "  package-termux    - Ship full standalone source & assets to releases/termux"
@@ -32,18 +43,22 @@ build:
 install: build
 	@mkdir -p $(BINDIR)
 	@install -m 755 build/ui/razor_cpp_standalone $(BINDIR)/razor
-	@mkdir -p $(HOME)/.razor/skills $(HOME)/.razor/plugins
-	@cp -rf assets/skills/* $(HOME)/.razor/skills/ 2>/dev/null || true
-	@cp -rf assets/plugins/* $(HOME)/.razor/plugins/ 2>/dev/null || true
-	@cp -f assets/skills_manifest.json $(HOME)/.razor/ 2>/dev/null || true
-	@if [ ! -f $(HOME)/.razor/model.yaml ]; then cp -f model.yaml $(HOME)/.razor/model.yaml; fi
-	@if [ ! -f $(HOME)/.razor/config.yaml ]; then cp -f config.yaml $(HOME)/.razor/config.yaml; fi
+	@if [ -f build/router/razor_router_daemon ]; then install -m 755 build/router/razor_router_daemon $(BINDIR)/razor_router_daemon; fi
+	@mkdir -p $(RAZOR_HOME)/skills $(RAZOR_HOME)/plugins $(RAZOR_HOME)/sessions $(RAZOR_HOME)/roles
+	@if [ -d assets/skills ]; then cp -rf assets/skills/* $(RAZOR_HOME)/skills/ 2>/dev/null || true; fi
+	@if [ -d assets/plugins ]; then cp -rf assets/plugins/* $(RAZOR_HOME)/plugins/ 2>/dev/null || true; fi
+	@if [ -f assets/skills_manifest.json ]; then cp -f assets/skills_manifest.json $(RAZOR_HOME)/skills_manifest.json 2>/dev/null || true; fi
+	@if [ -f model.yaml ] && [ ! -f $(RAZOR_HOME)/model.yaml ]; then cp -f model.yaml $(RAZOR_HOME)/model.yaml; fi
+	@if [ ! -f $(RAZOR_HOME)/config.yaml ] && [ -f config.yaml ]; then cp -f config.yaml $(RAZOR_HOME)/config.yaml; fi
+
 	@echo ""
 	@echo "============================================================"
 	@echo "  ✓ Razor binary installed to : $(BINDIR)/razor"
-	@echo "  ✓ Skills deployed to        : $(HOME)/.razor/skills"
-	@echo "  ✓ Config deployed to        : $(HOME)/.razor/"
+	@echo "  ✓ Config location           : $(RAZOR_HOME)/model.yaml"
+	@echo "  ✓ Skills deployed to        : $(RAZOR_HOME)/skills"
+	@echo "  ✓ Launch with               : razor"
 	@echo "============================================================"
+
 
 uninstall:
 	@rm -f $(BINDIR)/razor

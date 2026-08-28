@@ -1,6 +1,7 @@
 #include "http_client.hpp"
 #include <curl/curl.h>
 #include <iostream>
+#include <chrono>
 
 namespace razor {
 
@@ -64,6 +65,116 @@ std::string HttpClient::Post(const std::string& url, const std::string& api_key,
         }
     }
     return response_string;
+}
+
+// ─── Streaming SSE support ───────────────────────────────────────────────────
+
+struct StreamState {
+    std::string buffer;
+    std::string response_body;
+    std::function<void(const std::string&)> on_chunk;
+    size_t chunk_count = 0;
+};
+
+static size_t StreamWriteCallback(void* contents, size_t size, size_t nmemb, void* userp) {
+    size_t total_size = size * nmemb;
+    StreamState* state = static_cast<StreamState*>(userp);
+    state->buffer.append(static_cast<char*>(contents), total_size);
+    state->response_body.append(static_cast<char*>(contents), total_size);
+
+    size_t pos;
+    while ((pos = state->buffer.find('\n')) != std::string::npos) {
+        std::string line = state->buffer.substr(0, pos);
+        state->buffer = state->buffer.substr(pos + 1);
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        if (line.rfind("data: ", 0) == 0) {
+            std::string data = line.substr(6);
+            if (data != "[DONE]" && !data.empty()) {
+                state->chunk_count++;
+                state->on_chunk(data);
+            }
+        }
+    }
+    return total_size;
+}
+
+std::string HttpClient::PostStream(
+    const std::string& url,
+    const std::string& api_key,
+    const std::string& payload,
+    std::function<void(const std::string&)> on_chunk,
+    long timeout_seconds)
+{
+    std::cout << "[HttpClient] PostStream → " << url
+              << " | timeout=" << (timeout_seconds > 0 ? timeout_seconds : 60L)
+              << "s | payload_len=" << payload.size() << "\n";
+
+    StreamState state;
+    state.on_chunk = std::move(on_chunk);
+
+    CURL* curl = curl_easy_init();
+    if (!curl) {
+        std::cerr << "[HttpClient] PostStream curl_easy_init() returned null\n";
+        return "";
+    }
+
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L);
+    // Abort only when the stream stalls, not when a long generation is still flowing.
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_LIMIT, 1L);
+    curl_easy_setopt(curl, CURLOPT_LOW_SPEED_TIME, timeout_seconds > 0 ? timeout_seconds : 60L);
+
+    struct curl_slist* headers = nullptr;
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+    if (!api_key.empty()) {
+        std::string auth_header = "Authorization: Bearer " + api_key;
+        headers = curl_slist_append(headers, auth_header.c_str());
+    }
+
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, payload.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, StreamWriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &state);
+
+    auto t0 = std::chrono::steady_clock::now();
+    CURLcode res = curl_easy_perform(curl);
+    auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                          std::chrono::steady_clock::now() - t0).count();
+
+    long http_code = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+
+    if (res != CURLE_OK) {
+        std::cerr << "[HttpClient] PostStream curl FAILED | url=" << url
+                   << " | curl=" << curl_easy_strerror(res)
+                   << " | HTTP=" << http_code
+                   << " | elapsed=" << elapsed_ms << "ms"
+                   << " | chunks_received=" << state.chunk_count << "\n";
+        constexpr size_t kMaxLoggedBody = 2048;
+        if (!state.response_body.empty()) {
+            std::cerr << "[HttpClient] PostStream raw body (curl fail) | url=" << url
+                       << " | body_len=" << state.response_body.size()
+                       << " | body=\n" << state.response_body.substr(0, kMaxLoggedBody) << "\n";
+        }
+        std::cerr << "[HttpClient::PostStream] curl failed: " << curl_easy_strerror(res) << std::endl;
+    } else {
+        std::cout << "[HttpClient] PostStream done | url=" << url
+                  << " | HTTP=" << http_code
+                  << " | elapsed=" << elapsed_ms << "ms"
+                  << " | chunks_received=" << state.chunk_count << "\n";
+        constexpr size_t kMaxLoggedBody = 2048;
+        if (http_code >= 400 || state.chunk_count == 0) {
+            std::cout << "[HttpClient] PostStream raw body | url=" << url
+                      << " | HTTP=" << http_code
+                      << " | body_len=" << state.response_body.size()
+                      << " | body=\n" << state.response_body.substr(0, kMaxLoggedBody) << "\n";
+        }
+    }
+
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+    return state.response_body;
 }
 
 std::string HttpClient::Request(const std::string& method, const std::string& url, const std::vector<std::string>& headers, const std::string& payload, long timeout_seconds) {

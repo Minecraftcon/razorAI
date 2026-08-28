@@ -2,6 +2,7 @@
 #include "task_manager.hpp"
 #include "skill_manager.hpp"
 #include "web_search.hpp"
+#include "logger.hpp"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -16,16 +17,28 @@
 #include <fcntl.h>
 #include <poll.h>
 #include <sys/inotify.h>
+#include <sys/wait.h>
 #include <chrono>
 #include <shared_mutex>
 #include <algorithm>
+#include <map>
 #include "http_client.hpp"
 #include <nlohmann/json.hpp>
+#include <thread>
 using json = nlohmann::json;
 
 namespace razor {
 
-
+static bool WriteAll(int fd, const std::string& data) {
+    if (fd < 0) return false;
+    size_t sent = 0;
+    while (sent < data.size()) {
+        ssize_t n = send(fd, data.data() + sent, data.size() - sent, MSG_NOSIGNAL);
+        if (n <= 0) return false;
+        sent += static_cast<size_t>(n);
+    }
+    return true;
+}
 
 static std::string EscapeJson(const std::string& str) {
     std::ostringstream ss;
@@ -54,16 +67,26 @@ std::string SocketDaemon::GetDefaultSocketPath() {
 }
 
 void SocketDaemon::LogMessage(const std::string& severity, const std::string& message) {
+    // Write to daemon.log (legacy, human-readable daemon log)
     const char* home = std::getenv("HOME");
     std::string path = home ? std::string(home) + "/.razor/daemon.log" : "/tmp/daemon.log";
     std::ofstream ofs(path, std::ios::app);
-    if (!ofs) return;
-
-    auto now = std::chrono::system_clock::now();
-    auto in_time_t = std::chrono::system_clock::to_time_t(now);
-    
-    ofs << "[" << std::put_time(std::localtime(&in_time_t), "%Y-%m-%d %H:%M:%S") << "] "
-        << "[" << severity << "] " << message << "\n";
+    if (ofs) {
+        auto now = std::chrono::system_clock::now();
+        auto in_time_t = std::chrono::system_clock::to_time_t(now);
+        ofs << "[" << std::put_time(std::localtime(&in_time_t), "%Y-%m-%d %H:%M:%S") << "] "
+            << "[" << severity << "] " << message << "\n";
+    }
+    // Also mirror to unified debug.log at the appropriate level
+    if (severity == "ERROR") {
+        RLOG_ERROR("[daemon] " << message);
+    } else if (severity == "WARN" || severity == "WARNING") {
+        RLOG_WARN("[daemon] " << message);
+    } else if (severity == "DEBUG") {
+        RLOG_DEBUG("[daemon] " << message);
+    } else {
+        RLOG_INFO("[daemon] " << message);
+    }
 }
 
 SocketDaemon::SocketDaemon(const SocketConfig& config)
@@ -73,6 +96,7 @@ SocketDaemon::SocketDaemon(const SocketConfig& config)
     if (socket_config_.socket_path.empty()) {
         socket_config_.socket_path = GetDefaultSocketPath();
     }
+    socket_config_.config_path = Config::ResolveConfigPath(socket_config_.config_path);
     model_config_ = Config::LoadConfig(socket_config_.config_path);
 }
 
@@ -84,9 +108,11 @@ bool SocketDaemon::Start() {
     if (is_running_) return true;
 
     // Reload model configuration on start
+    socket_config_.config_path = Config::ResolveConfigPath(socket_config_.config_path);
     model_config_ = Config::LoadConfig(socket_config_.config_path);
 
     is_running_ = true;
+
 
     // Start Unix socket listener thread
     unix_listener_thread_ = std::thread(&SocketDaemon::ListenUnixSocket, this);
@@ -562,63 +588,186 @@ std::string SocketDaemon::ProcessRequestJson(const std::string& request_json, in
             payload["tool_choice"] = "auto";
         }
 
+        // Enable SSE streaming for text responses
+        payload["stream"] = true;
+        
+        // Prevent sudden stops by specifying max_tokens
+        payload["max_tokens"] = 8192;
+
         std::string payload_str = payload.dump();
-        LogMessage("INFO", "Payload Sent to API: " + payload_str);
-        
-        std::string api_response = HttpClient::Post(endpoint, api_key, payload_str, 60);
-        
-        if (api_response.empty()) {
-            response_text = "[Router Output] API call failed: No response received from " + model_name + " endpoint (" + endpoint + "). Please verify your network and API key.";
+        LogMessage("INFO", "Payload Sent to API (streaming): " + payload_str.substr(0, 200));
+
+        // Accumulators for streaming
+        std::string streamed_reasoning;
+        std::string streamed_content;
+        std::string tool_calls_raw;       // raw SSE tool_calls delta chunks (accumulated JSON)
+        bool got_tool_calls_signal = false;
+        std::string raw_api_body;
+
+        // Accumulated partial tool call args per index
+        std::map<int, std::string> tc_arg_chunks;
+        std::map<int, std::string> tc_names;
+        std::map<int, std::string> tc_ids;
+
+        if (provider == "opencode" || endpoint == "opencode") {
+            std::string opencode_bin = "/home/shado/.opencode/bin/opencode";
+            if (access(opencode_bin.c_str(), X_OK) != 0) {
+                opencode_bin = "opencode";
+            }
+            std::string effective_key = api_key.empty() ? (getenv("OPENCODE_API_KEY") ? getenv("OPENCODE_API_KEY") : "") : api_key;
+            RLOG_INFO("OpenCode CLI launch (secure)");
+
+            int pipefd[2];
+            if (pipe(pipefd) == 0) {
+                pid_t pid = fork();
+                if (pid == 0) {
+                    close(pipefd[0]);
+                    dup2(pipefd[1], STDOUT_FILENO);
+                    dup2(pipefd[1], STDERR_FILENO);
+                    close(pipefd[1]);
+
+                    setenv("OPENCODE_API_KEY", effective_key.c_str(), 1);
+
+                    std::vector<char*> args;
+                    args.push_back((char*)opencode_bin.c_str());
+                    args.push_back((char*)"run");
+                    args.push_back((char*)"-m");
+                    args.push_back((char*)model_id.c_str());
+                    args.push_back((char*)prompt.c_str());
+                    args.push_back(nullptr);
+
+                    execvp(opencode_bin.c_str(), args.data());
+                    exit(1);
+                } else if (pid > 0) {
+                    close(pipefd[1]);
+                    FILE* out_pipe = fdopen(pipefd[0], "r");
+                    if (out_pipe) {
+                        char buf[512];
+                        while (fgets(buf, sizeof(buf), out_pipe) != nullptr) {
+                            std::string line_chunk = buf;
+                            if (line_chunk.rfind("> build", 0) == 0) continue;
+                            streamed_content += line_chunk;
+                            json sc;
+                            sc["status"] = "stream_chunk";
+                            sc["token"] = line_chunk;
+                            std::string sc_line = sc.dump() + "\n";
+                            if (!WriteAll(client_fd, sc_line)) break;
+                        }
+                        fclose(out_pipe);
+                    }
+                    int status;
+                    waitpid(pid, &status, 0);
+                }
+            } else {
+                RLOG_ERROR("OpenCode CLI pipe() failed");
+            }
         } else {
+        raw_api_body = HttpClient::PostStream(endpoint, api_key, payload_str, [&](const std::string& sse_data) {
             try {
-                json resp_json = json::parse(api_response);
-                if (resp_json.contains("choices") && !resp_json["choices"].empty()) {
-                    auto& message = resp_json["choices"][0]["message"];
-                    std::string text_content = "";
-                    if (message.contains("content") && !message["content"].is_null() && message["content"].is_string()) {
-                        text_content = message["content"].get<std::string>();
+                    json chunk = json::parse(sse_data);
+                    if (!chunk.contains("choices") || chunk["choices"].empty()) return;
+
+                    auto& choice = chunk["choices"][0];
+                    std::string finish_reason = "";
+                    if (choice.contains("finish_reason") && !choice["finish_reason"].is_null()) {
+                        finish_reason = choice["finish_reason"].get<std::string>();
+                        if (finish_reason == "tool_calls") got_tool_calls_signal = true;
                     }
 
-                    if (message.contains("tool_calls") && !message["tool_calls"].empty()) {
-                        // Extract tool calls and normalize
-                        json normalized_calls = json::array();
-                        for (auto& tc : message["tool_calls"]) {
-                            json norm;
-                            norm["tool"] = tc["function"]["name"];
-                            norm["tool_call_id"] = tc.value("id", "");
-                            if (tc.contains("function") && tc["function"].contains("arguments")) {
-                                try {
-                                    norm["args"] = json::parse(tc["function"]["arguments"].get<std::string>());
-                                } catch (...) {
-                                    norm["args"] = json::object();
-                                }
-                            } else {
-                                norm["args"] = json::object();
-                            }
-                            normalized_calls.push_back(norm);
-                        }
-                        
-                        if (!text_content.empty()) {
-                            json combined;
-                            combined["content"] = text_content;
-                            combined["tool_calls"] = normalized_calls;
-                            response_text = combined.dump();
-                        } else {
-                            response_text = normalized_calls.dump();
-                        }
-                    } else if (!text_content.empty()) {
-                        response_text = text_content;
-                    } else {
-                        response_text = "[Router Output] API returned empty content.";
+                    if (!choice.contains("delta")) return;
+                    auto& delta = choice["delta"];
+
+                    // Stream reasoning / thinking tokens separately
+                    std::string r_tok = "";
+                    if (delta.contains("reasoning_content") && delta["reasoning_content"].is_string() && !delta["reasoning_content"].get<std::string>().empty()) {
+                        r_tok = delta["reasoning_content"].get<std::string>();
+                    } else if (delta.contains("reasoning") && delta["reasoning"].is_string() && !delta["reasoning"].get<std::string>().empty()) {
+                        r_tok = delta["reasoning"].get<std::string>();
+                    } else if (delta.contains("thought") && delta["thought"].is_string() && !delta["thought"].get<std::string>().empty()) {
+                        r_tok = delta["thought"].get<std::string>();
                     }
-                } else {
-                    response_text = "[Router Output] API call failed: " + api_response;
+
+                    if (!r_tok.empty()) {
+                        streamed_reasoning += r_tok;
+                        json sc;
+                        sc["status"] = "reasoning_chunk";
+                        sc["token"] = r_tok;
+                        std::string sc_line = sc.dump() + "\n";
+                        if (!WriteAll(client_fd, sc_line)) return;
+                    }
+
+                    // Stream normal answer content
+                    if (delta.contains("content") && delta["content"].is_string() && !delta["content"].get<std::string>().empty()) {
+                        std::string c_tok = delta["content"].get<std::string>();
+                        streamed_content += c_tok;
+                        json sc;
+                        sc["status"] = "stream_chunk";
+                        sc["token"] = c_tok;
+                        std::string sc_line = sc.dump() + "\n";
+                        if (!WriteAll(client_fd, sc_line)) return;
+                    }
+
+                    // Accumulate tool call deltas
+                    if (delta.contains("tool_calls") && delta["tool_calls"].is_array()) {
+                        got_tool_calls_signal = true;
+                        for (auto& tc_delta : delta["tool_calls"]) {
+                            int idx = tc_delta.value("index", 0);
+                            if (tc_delta.contains("id")) tc_ids[idx] = tc_delta["id"].get<std::string>();
+                            if (tc_delta.contains("function")) {
+                                if (tc_delta["function"].contains("name"))
+                                    tc_names[idx] = tc_delta["function"]["name"].get<std::string>();
+                                if (tc_delta["function"].contains("arguments"))
+                                    tc_arg_chunks[idx] += tc_delta["function"]["arguments"].get<std::string>();
+                            }
+                        }
+                    }
+                } catch (...) {}
+            }, 900);
+        } // end else (non-opencode HTTP stream)
+
+
+        // ─── Parse full response after streaming ends ─────────────────────
+        if (got_tool_calls_signal && !tc_names.empty()) {
+            // Reassemble tool calls from streaming deltas
+            json normalized_calls = json::array();
+            for (auto& [idx, name] : tc_names) {
+                json norm;
+                norm["tool"] = name;
+                norm["tool_call_id"] = tc_ids.count(idx) ? tc_ids.at(idx) : "";
+                try {
+                    norm["args"] = json::parse(tc_arg_chunks.count(idx) ? tc_arg_chunks.at(idx) : "{}");
+                } catch (...) {
+                    norm["args"] = json::object();
                 }
-            } catch (...) {
-                response_text = "[Router Output] JSON Parsing failed. Raw: " + api_response;
+                normalized_calls.push_back(norm);
             }
+            if (!streamed_content.empty()) {
+                json combined;
+                combined["content"] = streamed_content;
+                combined["tool_calls"] = normalized_calls;
+                response_text = combined.dump();
+            } else {
+                response_text = normalized_calls.dump();
+            }
+        } else if (!streamed_content.empty()) {
+            response_text = streamed_content;
+        } else if (!streamed_reasoning.empty()) {
+            // Reasoning tokens were already streamed live to the UI.
+            // Do NOT re-send them as the final response — just leave response_text empty.
+            // The UI will see an empty response and call ProvideResponse("") to unfreeze.
+            response_text = "";
+        } else {
+            response_text = "[Router Output] API call failed or returned empty content from " + model_name + ".";
         }
-        
+
+        if ((response_text.find("[Router Output]") != std::string::npos || response_text.empty()) && !raw_api_body.empty()) {
+            RLOG_INFO("SocketDaemon::ProcessRequestJson raw API body | model=" << model_id
+                      << " | body_len=" << raw_api_body.size()
+                      << " | body=\n" << raw_api_body);
+        }
+
+
+
         if (response_text.find("[Router Output]") != std::string::npos) {
             LogMessage("ERROR", "API call failed for model: " + model_id);
         } else {
@@ -679,9 +828,7 @@ void SocketDaemon::HandleClientConnection(int client_fd) {
     
     if (!request_str.empty()) {
         std::string response_json = ProcessRequestJson(request_str, client_fd);
-        write(client_fd, response_json.c_str(), response_json.size());
-        // Write newline as delimiter
-        write(client_fd, "\n", 1);
+        WriteAll(client_fd, response_json + "\n");
     }
     close(client_fd);
 }

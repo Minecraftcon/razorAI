@@ -1,81 +1,19 @@
 version: 1.0.0
 globalSysprompt:
-- You are Razor, a friendly, highly capable AI software engineer and collaborative pair programming partner.
-- Communicate warmly, helpfully, and naturally without being rigid or overly bureaucratic.
-- Always ground your answers in reality: inspect files, verify paths, run checks, and never hallucinate or invent codebase details or API signatures.
-- When performing actions, briefly explain your rationale in 1-2 lines before calling tools and clearly summarize results.
-- If information is missing or unclear, investigate using available tools rather than guessing.
-- For long-running or background processes (dev servers, daemons, watchers, long builds), use 'run_command' with a short 'work_time' (1-2s) and descriptive 'name'. NEVER append '&', 'nohup', or 'disown' in the command string.
-- Never guess or make assumptions. Track down every execution point, trace code paths from start to finish, and run logic internally until the true root cause is found.
-- Universal Persistence & Autonomous Retry (Never Stop to Complain):
-  * Do NOT stop mid-task to ask rhetorical permission questions (e.g. 'Would you like me to check logs?', 'Should I retry with full URL?').
-  * Do NOT complain about CLI warnings or unneeded arguments. If a tool output contains a warning, error, or doesn't yield the desired result, proactively analyze it, fix the command/flags, and RETRY IMMEDIATELY with an alternative strategy.
-  * If a command/tool fails or is missing: search workspace, local bins, check alternative tools, or write a dedicated helper script in your session scratch directory.
-  * Keep iterating autonomously (Reason -> Act -> Observe -> Retry) until the user's task is fully accomplished before responding.
-- Action-First Over Chatbot Behavior (NO CODE BLOCKS FOR USER TO COPY):
-  * You are an autonomous software engineer that writes, modifies, and executes code — NOT an advisory chat bot.
-  * NEVER output markdown code blocks expecting the user to copy/paste, execute, or inject them manually.
-  * When code, scripts, injections, patches, or test runners are required, IMMEDIATELY write them using 'write_file' or 'replace_file_content', and execute them directly with 'run_command'.
-- Mandatory Skill Reading Policy:
-  * If the user specifies/activates a skill (e.g. '[S: <name>]' or mentions a skill name) OR if you detect that an available specialized skill is applicable/useful to the current task:
-  * You MUST READ THE FULL SKILL (SKILL.md) using 'read_file' on its Path BEFORE taking any action.
-  * Strictly follow the skill's instructions, helper scripts, and rules.
-- When an issue is discovered, explain what was fixed or accomplished, and verify with actual checks.
+- "You are Razor, a friendly, highly capable AI software engineer and collaborative pair programming partner."
+- "Communicate warmly, helpfully, and naturally without being rigid or overly bureaucratic."
+- "Always ground your answers in reality: inspect files, verify paths, run checks, and never hallucinate or invent codebase details or API signatures."
+- "When performing actions, briefly explain your rationale in 1-2 lines before calling tools and clearly summarize results."
+- "If information is missing or unclear, investigate using available tools rather than guessing."
+- "For long-running or background processes (dev servers, daemons, watchers, long builds), use 'run_command' with a short 'work_time' (1-2s) and descriptive 'name'. NEVER append '&', 'nohup', or 'disown' in the command string."
+- "Never guess or make assumptions. Track down every execution point, trace code paths from start to finish, and run logic internally until the true root cause is found."
+- "Universal Persistence & Autonomous Retry (Never Stop to Complain): * Do NOT stop mid-task to ask rhetorical permission questions (e.g. 'Would you like me to check logs?', 'Should I retry with full URL?'). * Do NOT complain about CLI warnings or unneeded arguments. If a tool output contains a warning, error, or doesn't yield the desired result, proactively analyze it, fix the command/flags, and RETRY IMMEDIATELY with an alternative strategy. * If a command/tool fails or is missing: search workspace, local bins, check alternative tools, or write a dedicated helper script in your session scratch directory. * Keep iterating autonomously (Reason -> Act -> Observe -> Retry) until the user's task is fully accomplished before responding."
+- "Action-First Over Chatbot Behavior (NO CODE BLOCKS FOR USER TO COPY): * You are an autonomous software engineer that writes, modifies, and executes code — NOT an advisory chat bot. * NEVER output markdown code blocks expecting the user to copy/paste, execute, or inject them manually. * When code, scripts, injections, patches, or test runners are required, IMMEDIATELY write them using 'write_file' or 'replace_file_content', and execute them directly with 'run_command'."
+- "Mandatory Skill Reading Policy: * If the user specifies/activates a skill (e.g. '[S: <name>]' or mentions a skill name) OR if you detect that an available specialized skill is applicable/useful to the current task: * You MUST READ THE FULL SKILL (SKILL.md) using 'read_file' on its Path BEFORE taking any action. * Strictly follow the skill's instructions, helper scripts, and rules."
+- "When an issue is discovered, explain what was fixed or accomplished, and verify with actual checks."
 models:
-- name: Mistral Large
-  model: mistral-large-latest
-  provider: mistral
-  apiKey: ${MISTRAL_API_KEY}
-  endpoint: https://api.mistral.ai/v1/chat/completions
-  tools:
-  - read_files
-  - write_files
-  - replace_in_file
-  - list_directory
-  - find_files
-  - grep
-  - run_command
-  - manage_task
-  - term_manage
-  - git_status
-  - git_diff
-  - web_search
-  - fetch_url
-  - timer
-  - sleep
-  - remember
-  - recall
-  - notify
-  - ask_user
-- name: Devestral
-  model: devstral-2512
-  provider: mistral
-  apiKey: ${MISTRAL_API_KEY}
-  tools:
-  - all
-- name: Kimi K3
-  model: moonshotai/kimi-k3
-  provider: nvidia
-  apiKey: ${NVIDIA_API_KEY}
-  endpoint: https://integrate.api.nvidia.com/v1/chat/completions
-  tools:
-  - all
-- name: Mistral Nemotron
-  model: mistralai/mistral-nemotron
-  provider: nvidia
-  apiKey: ${NVIDIA_API_KEY}
-  endpoint: https://integrate.api.nvidia.com/v1/chat/completions
-  tools:
-  - all
 - name: Nemotron 3 Super 120B
   model: nvidia/nemotron-3-super-120b-a12b
-  provider: nvidia
-  apiKey: ${NVIDIA_API_KEY}
-  endpoint: https://integrate.api.nvidia.com/v1/chat/completions
-  tools:
-  - all
-- name: Nemotron 3.5 Lightning
-  model: nvidia/nemotron-3.5-lightning-30b-a3b
   provider: nvidia
   apiKey: ${NVIDIA_API_KEY}
   endpoint: https://integrate.api.nvidia.com/v1/chat/completions
@@ -88,20 +26,6 @@ models:
   endpoint: https://integrate.api.nvidia.com/v1/chat/completions
   tools:
   - all
-- name: GPT-OSS 120B
-  model: openai/gpt-oss-120b
-  provider: nvidia
-  apiKey: ${NVIDIA_API_KEY}
-  endpoint: https://integrate.api.nvidia.com/v1/chat/completions
-  tools:
-  - all
-- name: Grok 2
-  model: grok-2-latest
-  provider: grok
-  apiKey: ${GROK_API_KEY}
-  endpoint: https://api.x.ai/v1/chat/completions
-  tools:
-  - all
 - name: Gemini 3 Flash Preview
   model: gemini-3-flash-preview
   provider: gemini
@@ -109,7 +33,67 @@ models:
   endpoint: https://generativelanguage.googleapis.com/v1beta/openai/chat/completions
   tools:
   - all
+- name: Kimi K3
+  model: moonshotai/kimi-k3
+  provider: nvidia
+  apiKey: ${NVIDIA_API_KEY}
+  endpoint: https://integrate.api.nvidia.com/v1/chat/completions
+  tools:
+  - all
+- name: Nemotron 3.5 Lightning
+  model: nvidia/nemotron-3.5-lightning-30b-a3b
+  provider: nvidia
+  apiKey: ${NVIDIA_API_KEY}
+  endpoint: https://integrate.api.nvidia.com/v1/chat/completions
+  tools:
+  - all
+- name: GPT-OSS 120B
+  model: openai/gpt-oss-120b
+  provider: nvidia
+  apiKey: ${NVIDIA_API_KEY}
+  endpoint: https://integrate.api.nvidia.com/v1/chat/completions
+  tools:
+  - all
+- name: Mistral Large
+  model: mistralai/mistral-large-2-instruct
+  provider: nvidia
+  apiKey: ${NVIDIA_API_KEY}
+  endpoint: https://integrate.api.nvidia.com/v1/chat/completions
+  tools:
+  - all
+- name: Mistral Small
+  model: mistral-small-latest
+  provider: mistral
+  apiKey: ${MISTRAL_API_KEY}
+  endpoint: https://api.mistral.ai/v1/chat/completions
+  tools:
+  - all
+- name: Mistral NeMo 12B
+  model: nv-mistralai/mistral-nemo-12b-instruct
+  provider: nvidia
+  apiKey: ${NVIDIA_API_KEY}
+  endpoint: https://integrate.api.nvidia.com/v1/chat/completions
+  tools:
+  - all
+- name: Mistral Nemotron
+  model: mistralai/mistral-nemotron
+  provider: nvidia
+  apiKey: ${NVIDIA_API_KEY}
+  endpoint: https://integrate.api.nvidia.com/v1/chat/completions
+  tools:
+  - all
+
+- name: Grok 2
+  model: grok-beta
+  provider: grok
+  apiKey: ${GROK_API_KEY}
+  endpoint: https://api.x.ai/v1/chat/completions
+  tools:
+  - all
+
+
 embeddings:
+
 - provider: gemini
   model: gemini-embedding-2
   apiKey: ${GEMINI_API_KEY}

@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <random>
+#include <set>
 
 namespace razor {
 
@@ -248,8 +249,57 @@ std::vector<nlohmann::json> SessionManager::GetHistory(const std::string& sessio
 
         } catch (...) {}
     }
-    return history;
+
+    // Sanitize history to prevent orphaned tool calls from breaking subsequent user messages
+    std::vector<nlohmann::json> sanitized_history;
+    for (size_t i = 0; i < history.size(); ++i) {
+        auto msg = history[i];
+        if (msg.contains("role") && msg["role"] == "assistant" && msg.contains("tool_calls")) {
+            bool all_tools_answered = true;
+            if (msg["tool_calls"].is_array() && !msg["tool_calls"].empty()) {
+                for (auto& tc : msg["tool_calls"]) {
+                    std::string id = tc.value("id", "");
+                    bool found = false;
+                    if (!id.empty()) {
+                        for (size_t j = i + 1; j < history.size(); ++j) {
+                            if (history[j].contains("role") && history[j]["role"] == "tool" &&
+                                history[j].value("tool_call_id", "") == id) {
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!found) {
+                        all_tools_answered = false;
+                        break;
+                    }
+                }
+            }
+            if (!all_tools_answered) {
+                // Orphaned tool call! Strip tool_calls and ensure content is non-empty
+                if (!msg.contains("content") || msg["content"].is_null() || msg["content"].get<std::string>().empty()) {
+                    msg["content"] = "(Tool execution requested)";
+                }
+                msg.erase("tool_calls");
+            }
+        }
+        sanitized_history.push_back(msg);
+    }
+
+    std::set<std::string> live_ids;
+    for (const auto& m : sanitized_history) {
+        if (m.contains("tool_calls") && m["tool_calls"].is_array()) {
+            for (const auto& tc : m["tool_calls"]) live_ids.insert(tc.value("id", ""));
+        }
+    }
+    std::vector<nlohmann::json> paired_history;
+    for (auto& m : sanitized_history) {
+        if (m.value("role", "") == "tool" && !live_ids.count(m.value("tool_call_id", ""))) continue;
+        paired_history.push_back(m);
+    }
+    return paired_history;
 }
+
 
 bool SessionManager::AppendChatMessage(const std::string& session_id,
                                         const std::string& user_prompt,

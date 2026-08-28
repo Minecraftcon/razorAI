@@ -15,8 +15,9 @@ namespace razor {
 struct SocketConfig {
     std::string socket_path = "";  // Defaults to ~/.razor/router.sock
     int tcp_port = 9090;           // TCP port
-    std::string config_path = "model.yaml";
+    std::string config_path = "";  // Defaults to ~/.razor/model.yaml or ./model.yaml
 };
+
 
 class SocketDaemon {
 public:

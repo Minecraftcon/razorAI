@@ -4,12 +4,34 @@
 #include <iostream>
 #include <algorithm>
 #include <cstdlib>
+#include <unordered_set>
 #include <filesystem>
 #include <yaml-cpp/yaml.h>
 
 namespace fs = std::filesystem;
 
 namespace razor {
+
+static const std::vector<std::string> kWildcardTools = {
+    "run_command",
+    "run",
+    "manage_task",
+    "task_management",
+    "term_manage",
+    "list_dir",
+    "list_directory",
+    "list_files",
+    "ls",
+    "read_file",
+    "read_files",
+    "write_file",
+    "write_files",
+    "replace_file_content",
+    "replace_in_file",
+    "web_search",
+    "search_web",
+    "fetch_url",
+};
 
 static std::string Trim(const std::string& str) {
     auto first = str.find_first_not_of(" \t\r\n\"'");
@@ -33,6 +55,29 @@ static void ResolveDefaultEndpoint(ModelEntry& model) {
     else if (p == "anthropic") model.endpoint = "https://api.anthropic.com/v1/messages"; 
 }
 
+static std::vector<std::string> ExpandTools(const std::vector<std::string>& tools) {
+    std::vector<std::string> expanded;
+    std::unordered_set<std::string> seen;
+
+    auto add_tool = [&](const std::string& tool) {
+        if (tool.empty() || seen.count(tool)) return;
+        seen.insert(tool);
+        expanded.push_back(tool);
+    };
+
+    for (const auto& tool : tools) {
+        if (tool == "all") {
+            for (const auto& wildcard_tool : kWildcardTools) {
+                add_tool(wildcard_tool);
+            }
+        } else {
+            add_tool(tool);
+        }
+    }
+
+    return expanded;
+}
+
 std::string Config::ExpandEnvVar(const std::string& value) {
     std::string val = Trim(value);
     if (val.size() > 3 && val.substr(0, 2) == "${" && val.back() == '}') {
@@ -46,23 +91,58 @@ std::string Config::ExpandEnvVar(const std::string& value) {
     return val;
 }
 
-Config Config::LoadConfig(const std::string& path) {
-    Config cfg;
-    
-    // Try provided path first, fallback to model.yaml or config.yaml
-    std::string target_path = path;
-    std::ifstream check_file(target_path);
-    if (!check_file.is_open() && target_path != "model.yaml") {
-        std::ifstream model_file("model.yaml");
-        if (model_file.is_open()) {
-            target_path = "model.yaml";
+std::string Config::GetDefaultConfigPath() {
+    const char* home = std::getenv("HOME");
+    if (home) {
+        return std::string(home) + "/.razor/model.yaml";
+    }
+    return "model.yaml";
+}
+
+std::string Config::ResolveConfigPath(const std::string& requested_path) {
+    if (!requested_path.empty()) {
+        std::ifstream f(requested_path);
+        if (f.is_open()) return requested_path;
+    }
+
+    const char* razor_home = std::getenv("RAZOR_HOME");
+    const char* home = std::getenv("HOME");
+    std::vector<std::string> search_candidates;
+
+    if (razor_home) {
+        search_candidates.push_back(std::string(razor_home) + "/model.yaml");
+        search_candidates.push_back(std::string(razor_home) + "/config.yaml");
+    }
+    if (home) {
+        search_candidates.push_back(std::string(home) + "/.razor/model.yaml");
+        search_candidates.push_back(std::string(home) + "/.razor/config.yaml");
+    }
+    search_candidates.push_back("model.yaml");
+    search_candidates.push_back("config.yaml");
+
+    for (const auto& candidate : search_candidates) {
+        std::ifstream f(candidate);
+        if (f.is_open()) {
+            return candidate;
         }
     }
+
+    // Default fallback
+    if (home) {
+        return std::string(home) + "/.razor/model.yaml";
+    }
+    return "model.yaml";
+}
+
+Config Config::LoadConfig(const std::string& path) {
+    Config cfg;
+    std::string target_path = ResolveConfigPath(path);
 
     std::ifstream file(target_path);
     if (!file.is_open()) {
         return cfg;
     }
+
 
     std::string line;
     std::string current_section;
@@ -93,7 +173,8 @@ Config Config::LoadConfig(const std::string& path) {
         if (trimmed.find("embeddings:") == 0) {
             if (in_model_block && (!current_model.name.empty() || !current_model.provider.empty())) {
                 ResolveDefaultEndpoint(current_model);
-                    cfg.models.push_back(current_model);
+                current_model.tools = ExpandTools(current_model.tools);
+                cfg.models.push_back(current_model);
                 current_model = ModelEntry();
                 in_model_block = false;
             }
@@ -111,6 +192,7 @@ Config Config::LoadConfig(const std::string& path) {
             if (line.find("- name:") != std::string::npos || line.find("- provider:") != std::string::npos) {
                 if (in_model_block && (!current_model.name.empty() || !current_model.provider.empty())) {
                     ResolveDefaultEndpoint(current_model);
+                    current_model.tools = ExpandTools(current_model.tools);
                     cfg.models.push_back(current_model);
                     current_model = ModelEntry();
                 }
@@ -177,6 +259,7 @@ Config Config::LoadConfig(const std::string& path) {
 
     if (in_model_block && (!current_model.name.empty() || !current_model.provider.empty())) {
         ResolveDefaultEndpoint(current_model);
+        current_model.tools = ExpandTools(current_model.tools);
         cfg.models.push_back(current_model);
     }
     if (in_emb_block && !current_embedding.provider.empty()) {

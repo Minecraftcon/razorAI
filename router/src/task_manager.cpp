@@ -1,4 +1,5 @@
 #include "task_manager.hpp"
+#include "logger.hpp"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -55,16 +56,24 @@ TaskLaunchResult TaskManager::LaunchTask(const std::string& session_id,
     std::string task_id = GenerateTaskId();
     std::string task_name = name.empty() ? ("cmd_" + task_id) : name;
 
+    RLOG_INFO("TaskManager::LaunchTask | id=" << task_id
+              << " | name='" << task_name << "'"
+              << " | session='" << session_id << "'"
+              << " | work_time=" << work_time_secs << "s"
+              << " | cmd='" << command << "'");
+
     const char* home = std::getenv("HOME");
     std::string base_dir = home ? (std::string(home) + "/.razor/sessions") : "/tmp/razor_sessions";
     std::string log_dir = session_id.empty() ? ("/tmp/razor_tasks") : (base_dir + "/" + session_id + "/logs");
     std::string log_path = log_dir + "/" + task_id + ".log";
     EnsureLogDir(log_path);
+    RLOG_DEBUG("TaskManager::LaunchTask log_path='" << log_path << "'");
 
     int stdin_pipe[2];
     int stdout_pipe[2];
 
     if (pipe(stdin_pipe) < 0 || pipe(stdout_pipe) < 0) {
+        RLOG_ERROR("TaskManager::LaunchTask pipe() failed for task '" << task_id << "' errno=" << errno);
         TaskLaunchResult res;
         res.is_background = false;
         res.task_id = task_id;
@@ -76,6 +85,7 @@ TaskLaunchResult TaskManager::LaunchTask(const std::string& session_id,
 
     pid_t pid = fork();
     if (pid < 0) {
+        RLOG_ERROR("TaskManager::LaunchTask fork() failed for task '" << task_id << "' errno=" << errno);
         close(stdin_pipe[0]); close(stdin_pipe[1]);
         close(stdout_pipe[0]); close(stdout_pipe[1]);
         TaskLaunchResult res;
@@ -86,6 +96,7 @@ TaskLaunchResult TaskManager::LaunchTask(const std::string& session_id,
         res.output = "Error: Failed to fork process.";
         return res;
     }
+    RLOG_DEBUG("TaskManager::LaunchTask forked pid=" << pid << " for task '" << task_id << "'");
 
     if (pid == 0) {
         // Child Process
@@ -168,6 +179,15 @@ TaskLaunchResult TaskManager::LaunchTask(const std::string& session_id,
             exit_code = 128 + WTERMSIG(child_status);
         }
 
+        RLOG_INFO("TaskManager::LaunchTask SYNC_DONE | id='" << task_id
+                  << "' | exit=" << exit_code
+                  << " | output_len=" << sync_output.size());
+        if (exit_code != 0) {
+            RLOG_WARN("TaskManager::LaunchTask non-zero exit | id='" << task_id
+                      << "' | exit=" << exit_code
+                      << " | output='" << sync_output.substr(0, 300) << "'");
+        }
+
         TaskInfo info;
         info.task_id = task_id;
         info.name = task_name;
@@ -197,6 +217,9 @@ TaskLaunchResult TaskManager::LaunchTask(const std::string& session_id,
     }
 
     // Process is still running -> Background it!
+    RLOG_INFO("TaskManager::LaunchTask BACKGROUNDED | id='" << task_id
+              << "' | pid=" << pid
+              << " | log='" << log_path << "'");
     TaskInfo info;
     info.task_id = task_id;
     info.name = task_name;
@@ -251,6 +274,14 @@ TaskLaunchResult TaskManager::LaunchTask(const std::string& session_id,
         int exit_code = 0;
         if (WIFEXITED(status)) exit_code = WEXITSTATUS(status);
         else if (WIFSIGNALED(status)) exit_code = 128 + WTERMSIG(status);
+
+        RLOG_INFO("TaskManager background monitor DONE | id='" << task_id
+                  << "' | pid=" << pid
+                  << " | exit=" << exit_code);
+        if (exit_code != 0) {
+            RLOG_WARN("TaskManager background task failed | id='" << task_id
+                      << "' | exit=" << exit_code);
+        }
 
         {
             std::lock_guard<std::mutex> lock(mutex_);
@@ -337,17 +368,20 @@ bool TaskManager::KillTask(const std::string& task_id, std::string& message) {
     std::lock_guard<std::mutex> lock(mutex_);
     auto it = tasks_.find(task_id);
     if (it == tasks_.end()) {
+        RLOG_WARN("TaskManager::KillTask task not found: '" << task_id << "'");
         message = "Error: Task ID '" + task_id + "' not found.";
         return false;
     }
 
     TaskInfo& t = it->second;
     if (t.status != TaskStatus::RUNNING || t.pid <= 0) {
+        RLOG_WARN("TaskManager::KillTask task not running | id='" << task_id << "' | pid=" << t.pid);
         message = "Task '" + task_id + "' is not running (Current status: " +
                   (t.status == TaskStatus::DONE ? "DONE" : (t.status == TaskStatus::FAILED ? "FAILED" : "KILLED")) + ").";
         return false;
     }
 
+    RLOG_INFO("TaskManager::KillTask | id='" << task_id << "' | pid=" << t.pid << " name='" << t.name << "'");
     kill(-t.pid, SIGTERM);
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     kill(-t.pid, SIGKILL);
@@ -359,6 +393,7 @@ bool TaskManager::KillTask(const std::string& task_id, std::string& message) {
         t.stdin_fd = -1;
     }
 
+    RLOG_INFO("TaskManager::KillTask DONE | id='" << task_id << "'");
     message = "Successfully killed task '" + t.name + "' (" + task_id + ").";
     return true;
 }
@@ -367,22 +402,27 @@ bool TaskManager::SendKeycode(const std::string& task_id, const std::string& inp
     std::lock_guard<std::mutex> lock(mutex_);
     auto it = tasks_.find(task_id);
     if (it == tasks_.end()) {
+        RLOG_WARN("TaskManager::SendKeycode task not found: '" << task_id << "'");
         message = "Error: Task ID '" + task_id + "' not found.";
         return false;
     }
 
     TaskInfo& t = it->second;
     if (t.status != TaskStatus::RUNNING || t.stdin_fd < 0) {
+        RLOG_WARN("TaskManager::SendKeycode task not running/no stdin | id='" << task_id << "'");
         message = "Error: Task '" + task_id + "' is not actively running with an open stdin channel.";
         return false;
     }
 
+    RLOG_DEBUG("TaskManager::SendKeycode | id='" << task_id << "' | input_len=" << input.size());
     ssize_t written = write(t.stdin_fd, input.data(), input.size());
     if (written < 0) {
+        RLOG_ERROR("TaskManager::SendKeycode write() failed | id='" << task_id << "' | errno=" << errno);
         message = "Error: Failed to write to task stdin (errno: " + std::to_string(errno) + ").";
         return false;
     }
 
+    RLOG_DEBUG("TaskManager::SendKeycode wrote " << written << " bytes to '" << task_id << "'");
     message = "Sent " + std::to_string(written) + " bytes to task '" + task_id + "'.";
     return true;
 }

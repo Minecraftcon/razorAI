@@ -15,6 +15,7 @@ using PromptCallback = std::function<void(const std::string&)>;
 
 struct ChatMessage {
     std::string prompt;
+    std::string reasoning;
     std::string response;
     bool is_loading = false;
     size_t streamed_length = 0;
@@ -34,8 +35,15 @@ public:
     // Call this to update the latest response (simulates streaming)
     void ProvideResponse(const std::string& response);
     
+    // Append a single streamed token to the current loading message (true streaming)
+    void AppendStreamToken(const std::string& token);
+
+    // Append a single reasoning/thought token to the current loading message
+    void AppendReasoningToken(const std::string& token);
+    
     // Starts a new thinking indicator with a timer
     void StartThinking(const std::string& model_name);
+
     
     // Updates the model name of the currently loading message
     void UpdateModelName(const std::string& model_name);
@@ -96,6 +104,8 @@ private:
     int paste_line_count_ = 0;
     std::atomic<int> rapid_char_count_{0};
     std::atomic<bool> is_pasting_{false};
+    std::atomic<bool> show_reasoning_{false};
+
 };
 
 } // namespace razor

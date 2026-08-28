@@ -44,3 +44,12 @@ If `chrome-devtools-mcp` is insufficient, guide users to use Chrome DevTools UI:
 - https://developer.chrome.com/docs/devtools/ai-assistance
 
 If there are errors launching `chrome-devtools-mcp` or Chrome, refer to https://github.com/ChromeDevTools/chrome-devtools-mcp/blob/main/docs/troubleshooting.md.
+
+### Finding the Chrome Executable
+
+If the MCP server cannot find Chrome automatically, you can configure it explicitly by adding `--executablePath=/path/to/chrome` to your MCP server command. 
+
+Common Chrome executable names include: `chrome`, `chromium`, `chromium-browser`, `google-chrome`, `google-chrome-stable`, `google-chrome-beta`, `google-chrome-dev`, `google-chrome-unstable`, `chr`.
+
+To automatically find the correct executable path on Linux/macOS, use this one-liner command:
+`command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser || command -v chrome`
